@@ -56,110 +56,341 @@ from auth import (
 # Temas — Liquid Glass (escuro / claro)
 # ---------------------------------------------------------------------------
 
-_TEMA_DARK: dict = {
-    # Fundo da aplicação
-    "app_bg":           "radial-gradient(ellipse at 25% 15%, #1a4731 0%, #0d2518 55%, #060e09 100%)",
-    # Sidebar
-    "sidebar_bg":       "rgba(13,37,24,0.7)",
-    "sidebar_txt":      "rgba(255,255,255,0.85)",
-    # Variáveis CSS raiz
-    "cinza_texto":      "rgba(255,255,255,0.75)",
-    "cinza_suave":      "rgba(255,255,255,0.04)",
-    "borda":            "rgba(255,255,255,0.12)",
-    "glass_bg":         "rgba(255,255,255,0.07)",
-    "glass_border":     "rgba(255,255,255,0.15)",
-    # Inputs
-    "input_bg":         "rgba(255,255,255,0.07)",
-    "input_txt":        "white",
-    "input_ph":         "rgba(255,255,255,0.35)",
-    # Tabs / Botões
-    "tab_off":          "rgba(255,255,255,0.55)",
-    "btn_txt":          "white",
-    "btn_bg":           "rgba(255,255,255,0.08)",
-    # Destaque verde + chat
-    "verde_destaque":   "#4caf7d",
-    "chat_msg_bg":      "rgba(76,175,125,0.1)",
-    "chat_msg_border":  "rgba(76,175,125,0.2)",
-    # Dialog
-    "dialog_bg":        "rgba(13,37,24,0.85)",
+_TEMA_DARK = {
+    # Fundo e glass
+    "app_bg":         "radial-gradient(ellipse at 25% 15%, #1a4731 0%, #0d2518 55%, #060e09 100%)",
+    "glass_bg":       "rgba(255,255,255,0.07)",
+    "glass_border":   "rgba(255,255,255,0.15)",
+    "sidebar_bg":     "rgba(13,37,24,0.75)",
+    # Texto
+    "texto":          "rgba(255,255,255,0.85)",
+    "texto_suave":    "rgba(255,255,255,0.50)",
+    "texto_th":       "rgba(255,255,255,0.70)",
     # Tabelas HTML
-    "thead_bg":         "rgba(255,255,255,0.06)",
-    "thead_border":     "rgba(255,255,255,0.1)",
-    "tabela_borda":     "rgba(255,255,255,0.12)",
-    "th_color":         "rgba(255,255,255,0.7)",
-    "row_par":          "rgba(255,255,255,0.04)",
-    "row_impar":        "rgba(255,255,255,0.02)",
-    "caption_color":    "rgba(255,255,255,0.45)",
-    "caixas_thead":     "rgba(45,122,79,0.5)",
-    # Plotly
-    "plotly_font":      "rgba(255,255,255,0.75)",
-    "plotly_hdr":       "rgba(45,122,79,0.6)",
-    "plotly_cell1":     "rgba(255,255,255,0.04)",
-    "plotly_cell2":     "rgba(255,255,255,0.02)",
-    "plotly_font_cell": "rgba(255,255,255,0.8)",
-    "plotly_line":      "rgba(255,255,255,0.1)",
-    "plotly_line2":     "rgba(255,255,255,0.06)",
-    "plotly_grid":      "rgba(255,255,255,0.08)",
-    "plotly_zero":      "rgba(255,255,255,0.12)",
-    "plotly_title":     "white",
-    # Toggle
-    "btn_tema_label":   "☀️ Modo Claro",
+    "tabela_borda":   "rgba(255,255,255,0.10)",
+    "th_bg":          "rgba(255,255,255,0.06)",
+    "tr_par":         "rgba(255,255,255,0.04)",
+    "tr_impar":       "rgba(255,255,255,0.02)",
+    "thead_caixas":   "rgba(45,122,79,0.55)",
+    "banana_row":     "rgba(245,200,66,0.10)",
+    # Gráficos Plotly
+    "plot_font":      "rgba(255,255,255,0.75)",
+    "gridcolor":      "rgba(255,255,255,0.08)",
+    "zeroline":       "rgba(255,255,255,0.12)",
+    "cell_color":     ["rgba(255,255,255,0.04)", "rgba(255,255,255,0.02)"],
+    "cell_font":      "rgba(255,255,255,0.80)",
+    "header_table":   "rgba(45,122,79,0.60)",
+    "paper_bgcolor":  "rgba(0,0,0,0)",
+    "plot_bgcolor":   "rgba(0,0,0,0)",
+    # Plotly go.Table papel sólido (para exportação)
+    "table_paper":    "rgba(13,37,24,0.95)",
+    "table_title":    "#4caf7d",
+    # Badges inline (caixas)
+    "badge_sim_bg":   "rgba(16,185,129,0.20)",
+    "badge_sim_fg":   "#6ee7b7",
+    "badge_sim_bd":   "rgba(16,185,129,0.30)",
+    "badge_nao_bg":   "rgba(239,68,68,0.15)",
+    "badge_nao_fg":   "#fca5a5",
+    "badge_nao_bd":   "rgba(239,68,68,0.30)",
+    # Toggle label
+    "toggle_label":   "☀️ Modo claro",
+    "icone":          "🌙",
 }
 
-_TEMA_LIGHT: dict = {
-    # Fundo
-    "app_bg":           "radial-gradient(ellipse at 25% 15%, #e8f5ee 0%, #f4fbf7 55%, #f8fdfb 100%)",
-    # Sidebar
-    "sidebar_bg":       "rgba(218,240,226,0.9)",
-    "sidebar_txt":      "rgba(15,45,25,0.9)",
-    # Variáveis CSS raiz
-    "cinza_texto":      "rgba(15,45,25,0.8)",
-    "cinza_suave":      "rgba(15,45,25,0.04)",
-    "borda":            "rgba(45,122,79,0.2)",
-    "glass_bg":         "rgba(255,255,255,0.55)",
-    "glass_border":     "rgba(45,122,79,0.25)",
-    # Inputs
-    "input_bg":         "rgba(255,255,255,0.85)",
-    "input_txt":        "#1a3325",
-    "input_ph":         "rgba(15,45,25,0.4)",
-    # Tabs / Botões
-    "tab_off":          "rgba(15,45,25,0.55)",
-    "btn_txt":          "white",
-    "btn_bg":           "rgba(45,122,79,0.15)",
-    # Destaque verde + chat
-    "verde_destaque":   "#2d7a4f",
-    "chat_msg_bg":      "rgba(76,175,125,0.08)",
-    "chat_msg_border":  "rgba(76,175,125,0.15)",
-    # Dialog
-    "dialog_bg":        "rgba(232,245,238,0.9)",
+_TEMA_LIGHT = {
+    # Fundo e glass
+    "app_bg":         "radial-gradient(ellipse at 25% 15%, #e8f5ee 0%, #c8e6d4 55%, #f0faf4 100%)",
+    "glass_bg":       "rgba(255,255,255,0.55)",
+    "glass_border":   "rgba(26,71,49,0.15)",
+    "sidebar_bg":     "rgba(232,245,238,0.80)",
+    # Texto
+    "texto":          "#1a4731",
+    "texto_suave":    "#4b7a62",
+    "texto_th":       "#1a4731",
     # Tabelas HTML
-    "thead_bg":         "rgba(45,122,79,0.1)",
-    "thead_border":     "rgba(45,122,79,0.2)",
-    "tabela_borda":     "rgba(45,122,79,0.2)",
-    "th_color":         "rgba(15,45,25,0.75)",
-    "row_par":          "rgba(0,0,0,0.03)",
-    "row_impar":        "rgba(0,0,0,0.01)",
-    "caption_color":    "rgba(15,45,25,0.5)",
-    "caixas_thead":     "rgba(45,122,79,0.7)",
-    # Plotly
-    "plotly_font":      "rgba(15,45,25,0.75)",
-    "plotly_hdr":       "rgba(45,122,79,0.8)",
-    "plotly_cell1":     "rgba(255,255,255,0.8)",
-    "plotly_cell2":     "rgba(245,252,248,0.6)",
-    "plotly_font_cell": "rgba(15,45,25,0.85)",
-    "plotly_line":      "rgba(45,122,79,0.2)",
-    "plotly_line2":     "rgba(45,122,79,0.15)",
-    "plotly_grid":      "rgba(0,0,0,0.08)",
-    "plotly_zero":      "rgba(0,0,0,0.12)",
-    "plotly_title":     "#1a3325",
-    # Toggle
-    "btn_tema_label":   "🌙 Modo Escuro",
+    "tabela_borda":   "rgba(26,71,49,0.15)",
+    "th_bg":          "rgba(26,71,49,0.07)",
+    "tr_par":         "rgba(255,255,255,0.70)",
+    "tr_impar":       "rgba(232,245,238,0.50)",
+    "thead_caixas":   "#1a4731",
+    "banana_row":     "rgba(245,200,66,0.18)",
+    # Gráficos Plotly
+    "plot_font":      "#1a4731",
+    "gridcolor":      "rgba(26,71,49,0.10)",
+    "zeroline":       "rgba(26,71,49,0.18)",
+    "cell_color":     ["rgba(255,255,255,0.80)", "rgba(232,245,238,0.60)"],
+    "cell_font":      "#1a4731",
+    "header_table":   "rgba(26,71,49,0.75)",
+    "paper_bgcolor":  "rgba(0,0,0,0)",
+    "plot_bgcolor":   "rgba(0,0,0,0)",
+    # Plotly go.Table papel sólido (para exportação)
+    "table_paper":    "white",
+    "table_title":    "#1a4731",
+    # Badges inline (caixas)
+    "badge_sim_bg":   "#d1fae5",
+    "badge_sim_fg":   "#065f46",
+    "badge_sim_bd":   "rgba(16,185,129,0.40)",
+    "badge_nao_bg":   "#fee2e2",
+    "badge_nao_fg":   "#991b1b",
+    "badge_nao_bd":   "rgba(239,68,68,0.40)",
+    # Toggle label
+    "toggle_label":   "🌙 Modo escuro",
+    "icone":          "☀️",
 }
 
 
 def _get_tema() -> dict:
     """Retorna o dicionário de cores do tema ativo."""
     return _TEMA_DARK if st.session_state.get("tema_escuro", True) else _TEMA_LIGHT
+
+
+def _plotly_base(t: dict) -> dict:
+    """Kwargs base para fig.update_layout()."""
+    return dict(
+        paper_bgcolor=t["paper_bgcolor"],
+        plot_bgcolor=t["plot_bgcolor"],
+        font=dict(color=t["plot_font"], family="DM Sans"),
+    )
+
+
+def _plotly_axes(t: dict) -> dict:
+    """Kwargs base para update_xaxes/update_yaxes."""
+    return dict(
+        gridcolor=t["gridcolor"],
+        zerolinecolor=t["zeroline"],
+    )
+
+
+def _render_css_tema() -> None:
+    """Aplica CSS dinâmico com base no tema ativo (escuro / claro)."""
+    t = _get_tema()
+    st.markdown(f"""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+    html, body, [class*="css"] {{
+        font-family: 'DM Sans', sans-serif;
+    }}
+
+    :root {{
+        --verde-escuro:  #1a4731;
+        --verde-medio:   #2d7a4f;
+        --verde-claro:   #4caf7d;
+        --amarelo:       #f5c842;
+        --laranja:       #e8843a;
+        --glass-bg:      {t['glass_bg']};
+        --glass-border:  {t['glass_border']};
+        --texto:         {t['texto']};
+        --texto-suave:   {t['texto_suave']};
+    }}
+
+    .stApp {{
+        background: {t['app_bg']} !important;
+        background-attachment: fixed !important;
+    }}
+
+    [data-testid="stHeader"] {{
+        background: transparent !important;
+    }}
+
+    [data-testid="stSidebar"] {{
+        background: {t['sidebar_bg']} !important;
+        backdrop-filter: blur(20px) saturate(160%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
+        border-right: 1px solid var(--glass-border) !important;
+    }}
+    [data-testid="stSidebar"] *:not(button):not(input):not(select) {{
+        color: {t['texto']} !important;
+    }}
+    [data-testid="stSidebar"] .stButton > button {{
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: {t['texto']} !important;
+    }}
+    [data-testid="stSidebar"] .stButton > button:hover {{
+        background: rgba(76,175,125,0.2) !important;
+        border-color: #4caf7d !important;
+    }}
+
+    .block-container {{ padding-top: 1.5rem; }}
+
+    .app-header {{
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        padding: 1.5rem 2rem;
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.15),
+                    inset 0 1px 0 rgba(255,255,255,0.1);
+    }}
+    .app-header h1 {{ color: {t['texto']}; font-size: 1.75rem; font-weight: 700; margin: 0; }}
+    .app-header p  {{ color: {t['texto_suave']}; margin: 0; font-size: 0.9rem; }}
+
+    .metric-card {{
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        padding: 1.2rem 1.4rem;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1),
+                    inset 0 1px 0 rgba(255,255,255,0.08);
+    }}
+    .metric-card .label {{ color: {t['texto_suave']}; font-size: 0.78rem;
+        font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }}
+    .metric-card .value {{ color: #4caf7d; font-size: 2rem; font-weight: 700; }}
+    .metric-card .delta {{ color: {t['texto_suave']}; font-size: 0.82rem; }}
+    .metric-card .delta.pos {{ color: #4caf7d; }}
+    .metric-card .delta.neg {{ color: var(--laranja); }}
+
+    .progress-wrap {{
+        background: {t['glass_border']};
+        border-radius: 99px;
+        height: 10px;
+        overflow: hidden;
+    }}
+    .progress-bar {{ height: 10px; border-radius: 99px; transition: width 0.4s ease; }}
+
+    .badge {{ display: inline-block; padding: 0.2rem 0.65rem;
+              border-radius: 99px; font-size: 0.72rem; font-weight: 500;
+              letter-spacing: 0.04em; text-transform: uppercase; }}
+    .badge-green  {{ background: rgba(16,185,129,0.20); color: #6ee7b7;
+                     border: 1px solid rgba(16,185,129,0.30); }}
+    .badge-yellow {{ background: rgba(245,200,66,0.15); color: #d97706;
+                     border: 1px solid rgba(245,200,66,0.30); }}
+    .badge-red    {{ background: rgba(239,68,68,0.15); color: #fca5a5;
+                     border: 1px solid rgba(239,68,68,0.30); }}
+    .badge-blue   {{ background: rgba(99,102,241,0.15); color: #c7d2fe;
+                     border: 1px solid rgba(99,102,241,0.30); }}
+    .banana-row   {{ background: {t['banana_row']} !important; }}
+
+    .sidebar-status {{
+        background: rgba(76,175,125,0.12);
+        border-left: 3px solid #4caf7d;
+        padding: 0.75rem 1rem;
+        border-radius: 0 8px 8px 0;
+        font-size: 0.82rem;
+        color: {t['texto']};
+        margin-bottom: 0.75rem;
+    }}
+    .sidebar-status strong {{ color: #4caf7d; }}
+
+    .chat-container {{ max-height: 520px; overflow-y: auto; padding: 0.5rem; }}
+    [data-testid="stChatMessage"] p,
+    [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"] span {{
+        font-size: 1.05rem !important; line-height: 1.75 !important;
+    }}
+    [data-testid="stChatMessage"] strong {{
+        font-size: 1.05rem !important; color: #4caf7d;
+    }}
+    [data-testid="stChatMessage"] ul,
+    [data-testid="stChatMessage"] ol {{
+        padding-left: 1.4rem; margin: 0.5rem 0;
+    }}
+    [data-testid="stChatMessage"] li {{ margin-bottom: 0.35rem; }}
+    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {{
+        background: rgba(76,175,125,0.10);
+        border: 1px solid rgba(76,175,125,0.20);
+        border-radius: 12px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem;
+    }}
+
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 4px; background: var(--glass-bg);
+        padding: 4px; border-radius: 12px;
+        border: 1px solid var(--glass-border);
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 10px; padding: 0.45rem 1.1rem;
+        font-weight: 500; font-size: 0.88rem;
+        color: {t['texto_suave']} !important;
+        background: transparent !important;
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: rgba(76,175,125,0.20) !important;
+        color: #4caf7d !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+    }}
+    .stTabs [data-baseweb="tab-panel"] {{ background: transparent !important; }}
+
+    .stButton > button {{
+        border-radius: 12px; font-weight: 500; font-size: 0.88rem;
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: {t['texto']} !important;
+        transition: all 0.2s ease !important;
+    }}
+    .stButton > button:hover {{
+        background: rgba(255,255,255,0.13) !important;
+        border-color: rgba(76,175,125,0.4) !important;
+        transform: translateY(-1px);
+    }}
+    .stButton > button[kind="primary"] {{
+        background: #2d7a4f !important;
+        border-color: #2d7a4f !important;
+        color: white !important;
+    }}
+    .stButton > button[kind="primary"]:hover {{
+        background: #4caf7d !important;
+        border-color: #4caf7d !important;
+    }}
+
+    .stTextInput > div > div > input,
+    .stTextInput input,
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {{
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 10px !important;
+        color: {t['texto']} !important;
+        caret-color: {t['texto']} !important;
+    }}
+    .stTextInput input::placeholder {{ color: {t['texto_suave']} !important; }}
+    .stTextInput input:focus {{
+        border-color: #4caf7d !important;
+        box-shadow: 0 0 0 2px rgba(76,175,125,0.2) !important;
+    }}
+
+    div[data-testid="stMetricValue"] {{
+        font-family: 'DM Mono', monospace;
+        font-size: 1.8rem !important;
+        color: #4caf7d !important;
+    }}
+    div[data-testid="stMetric"] {{
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 14px; padding: 1rem 1.2rem;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }}
+
+    [data-testid="stExpander"] {{
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(12px);
+    }}
+
+    [data-testid="stAlert"] {{
+        border-radius: 12px !important;
+        backdrop-filter: blur(8px);
+    }}
+
+    div[data-testid="stDialog"] > div > div {{
+        max-width: 900px; width: 90vw;
+        background: var(--glass-bg) !important;
+        backdrop-filter: blur(24px) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 20px !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
 
 
 # ---------------------------------------------------------------------------
@@ -182,309 +413,7 @@ st.markdown(
 # ---------------------------------------------------------------------------
 # CSS customizado — tema Liquid Glass + Benverde
 # ---------------------------------------------------------------------------
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'DM Sans', sans-serif;
-    }
-
-    /* Variáveis */
-    :root {
-        --verde-escuro:  #1a4731;
-        --verde-medio:   #2d7a4f;
-        --verde-claro:   #4caf7d;
-        --verde-palido:  rgba(76,175,125,0.15);
-        --amarelo:       #f5c842;
-        --laranja:       #e8843a;
-        --cinza-texto:   rgba(255,255,255,0.75);
-        --cinza-suave:   rgba(255,255,255,0.04);
-        --borda:         rgba(255,255,255,0.12);
-        --glass-bg:      rgba(255,255,255,0.07);
-        --glass-border:  rgba(255,255,255,0.15);
-    }
-
-    /* Fundo geral */
-    .stApp {
-        background: radial-gradient(ellipse at 25% 15%,
-            #1a4731 0%, #0d2518 55%, #060e09 100%) !important;
-        background-attachment: fixed !important;
-    }
-
-    /* Header transparente */
-    [data-testid="stHeader"] {
-        background: transparent !important;
-    }
-
-    /* Sidebar glass */
-    [data-testid="stSidebar"] {
-        background: rgba(13, 37, 24, 0.7) !important;
-        backdrop-filter: blur(20px) saturate(160%) !important;
-        -webkit-backdrop-filter: blur(20px) saturate(160%) !important;
-        border-right: 1px solid var(--glass-border) !important;
-    }
-    [data-testid="stSidebar"] *:not(button):not(input):not(select) {
-        color: rgba(255,255,255,0.85) !important;
-    }
-    [data-testid="stSidebar"] .stButton > button {
-        background: rgba(255,255,255,0.08) !important;
-        border: 1px solid var(--glass-border) !important;
-        color: white !important;
-    }
-    [data-testid="stSidebar"] .stButton > button:hover {
-        background: rgba(76,175,125,0.2) !important;
-        border-color: #4caf7d !important;
-    }
-
-    /* Block container principal */
-    .block-container {
-        padding-top: 1.5rem;
-    }
-
-    /* App header */
-    .app-header {
-        background: rgba(255,255,255,0.07);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid var(--glass-border);
-        padding: 1.5rem 2rem;
-        border-radius: 16px;
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.3),
-                    inset 0 1px 0 rgba(255,255,255,0.1);
-    }
-    .app-header h1 {
-        color: white;
-        font-size: 1.75rem;
-        font-weight: 700;
-        margin: 0;
-        letter-spacing: -0.5px;
-    }
-    .app-header p {
-        color: rgba(255,255,255,0.65);
-        margin: 0;
-        font-size: 0.9rem;
-    }
-
-    /* Metric cards glass */
-    .metric-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid var(--glass-border);
-        border-radius: 14px;
-        padding: 1.2rem 1.4rem;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.25),
-                    inset 0 1px 0 rgba(255,255,255,0.08);
-    }
-    .metric-card .label {
-        font-size: 0.78rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: rgba(255,255,255,0.5);
-        margin-bottom: 0.4rem;
-    }
-    .metric-card .value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #4caf7d;
-        line-height: 1.1;
-    }
-    .metric-card .delta {
-        font-size: 0.82rem;
-        margin-top: 0.3rem;
-        color: rgba(255,255,255,0.45);
-    }
-    .metric-card .delta.pos { color: #4caf7d; }
-    .metric-card .delta.neg { color: var(--laranja); }
-
-    /* Progress bar de metas */
-    .progress-wrap {
-        background: rgba(255,255,255,0.1);
-        border-radius: 99px;
-        height: 10px;
-        width: 100%;
-        overflow: hidden;
-    }
-    .progress-bar {
-        height: 10px;
-        border-radius: 99px;
-        transition: width 0.4s ease;
-    }
-
-    /* Badges — translúcidos para funcionar em dark */
-    .badge {
-        display: inline-block;
-        padding: 0.2rem 0.65rem;
-        border-radius: 99px;
-        font-size: 0.72rem;
-        font-weight: 500;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-    }
-    .badge-green  { background: rgba(16,185,129,0.2);  color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
-    .badge-yellow { background: rgba(245,200,66,0.15); color: #fde68a; border: 1px solid rgba(245,200,66,0.3); }
-    .badge-red    { background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
-    .badge-blue   { background: rgba(99,102,241,0.15); color: #c7d2fe; border: 1px solid rgba(99,102,241,0.3); }
-
-    /* Linhas banana */
-    .banana-row { background: rgba(245,200,66,0.10) !important; }
-
-    /* Sidebar status */
-    .sidebar-status {
-        background: rgba(76,175,125,0.12);
-        border-left: 3px solid #4caf7d;
-        padding: 0.75rem 1rem;
-        border-radius: 0 8px 8px 0;
-        font-size: 0.82rem;
-        color: rgba(255,255,255,0.75);
-        margin-bottom: 0.75rem;
-    }
-    .sidebar-status strong { color: #4caf7d; }
-
-    /* Chat bubbles */
-    .chat-container {
-        max-height: 520px;
-        overflow-y: auto;
-        padding: 0.5rem;
-    }
-    [data-testid="stChatMessage"] p,
-    [data-testid="stChatMessage"] li,
-    [data-testid="stChatMessage"] span {
-        font-size: 1.05rem !important;
-        line-height: 1.75 !important;
-    }
-    [data-testid="stChatMessage"] strong {
-        font-size: 1.05rem !important;
-        color: #4caf7d;
-    }
-    [data-testid="stChatMessage"] ul,
-    [data-testid="stChatMessage"] ol {
-        padding-left: 1.4rem;
-        margin: 0.5rem 0;
-    }
-    [data-testid="stChatMessage"] li { margin-bottom: 0.35rem; }
-    [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
-        background: rgba(76,175,125,0.1);
-        border: 1px solid rgba(76,175,125,0.2);
-        border-radius: 12px;
-        padding: 0.5rem 0.75rem;
-        margin-bottom: 0.5rem;
-    }
-
-    /* Tabs */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 4px;
-        background: rgba(255,255,255,0.05);
-        padding: 4px;
-        border-radius: 12px;
-        border: 1px solid var(--glass-border);
-    }
-    .stTabs [data-baseweb="tab"] {
-        border-radius: 10px;
-        padding: 0.45rem 1.1rem;
-        font-weight: 500;
-        font-size: 0.88rem;
-        color: rgba(255,255,255,0.55) !important;
-        background: transparent !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background: rgba(76,175,125,0.2) !important;
-        color: #4caf7d !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    }
-    .stTabs [data-baseweb="tab-panel"] {
-        background: transparent !important;
-    }
-
-    /* Botões */
-    .stButton > button {
-        border-radius: 12px;
-        font-weight: 500;
-        font-size: 0.88rem;
-        background: rgba(255,255,255,0.08) !important;
-        border: 1px solid var(--glass-border) !important;
-        color: white !important;
-        transition: all 0.2s ease !important;
-    }
-    .stButton > button:hover {
-        background: rgba(255,255,255,0.13) !important;
-        border-color: rgba(255,255,255,0.25) !important;
-        transform: translateY(-1px);
-    }
-    .stButton > button[kind="primary"] {
-        background: #2d7a4f !important;
-        border-color: #2d7a4f !important;
-    }
-    .stButton > button[kind="primary"]:hover {
-        background: #4caf7d !important;
-        border-color: #4caf7d !important;
-    }
-
-    /* Inputs */
-    .stTextInput > div > div > input,
-    .stTextInput input,
-    .stSelectbox > div > div,
-    .stMultiSelect > div > div {
-        background: rgba(255,255,255,0.07) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 10px !important;
-        color: white !important;
-        caret-color: white !important;
-    }
-    .stTextInput input::placeholder { color: rgba(255,255,255,0.35) !important; }
-    .stTextInput input:focus {
-        border-color: #4caf7d !important;
-        box-shadow: 0 0 0 2px rgba(76,175,125,0.2) !important;
-        background: rgba(255,255,255,0.1) !important;
-    }
-
-    /* Métricas nativas Streamlit */
-    div[data-testid="stMetricValue"] {
-        font-family: 'DM Mono', monospace;
-        font-size: 1.8rem !important;
-        color: #4caf7d !important;
-    }
-    div[data-testid="stMetric"] {
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        border-radius: 14px;
-        padding: 1rem 1.2rem;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-    }
-
-    /* Expanders */
-    [data-testid="stExpander"] {
-        background: var(--glass-bg) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 12px !important;
-        backdrop-filter: blur(12px);
-    }
-
-    /* Alertas / info / warning */
-    [data-testid="stAlert"] {
-        border-radius: 12px !important;
-        backdrop-filter: blur(8px);
-    }
-
-    /* Dialog */
-    div[data-testid="stDialog"] > div > div {
-        max-width: 900px;
-        width: 90vw;
-        background: rgba(13,37,24,0.85) !important;
-        backdrop-filter: blur(24px) !important;
-        border: 1px solid var(--glass-border) !important;
-        border-radius: 20px !important;
-    }
-
-</style>
-""", unsafe_allow_html=True)
+# CSS dinâmico: _render_css_tema() é chamada em main()
 
 
 # ---------------------------------------------------------------------------
@@ -777,6 +706,8 @@ def _init_state() -> None:
         "path_caixas_json":    _DEFAULT_CAIXAS_JSON,
         "path_pasta_semar":    _DEFAULT_PASTA_SEMAR,
         "path_cache_semar":    _DEFAULT_CACHE_SEMAR,
+        # Tema
+        "tema_escuro":         True,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1128,6 +1059,17 @@ def _rodar_busca_precos(session_id: str, script_path: str) -> None:
 def _render_sidebar() -> None:
     """Renderiza a barra lateral com configurações e status."""
     with st.sidebar:
+        # ---- Toggle de tema ----
+        t = _get_tema()
+        col_tog, col_label = st.sidebar.columns([1, 4])
+        with col_tog:
+            if st.button(t["icone"], key="btn_tema", help=t["toggle_label"]):
+                st.session_state["tema_escuro"] = not st.session_state.get("tema_escuro", True)
+                st.rerun()
+        with col_label:
+            st.caption(t["toggle_label"])
+        st.sidebar.divider()
+
         st.markdown("## 🌿 Mita")
         st.markdown("---")
 
@@ -1381,6 +1323,7 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
     Returns:
         ``go.Figure`` com tabela estilizada.
     """
+    t = _get_tema()
     col_prod   = "Produtos"       if "Produtos"       in df_prog.columns else df_prog.columns[0]
     col_meta   = "meta"           if "meta"           in df_prog.columns else None
     col_pedido = "pedido"         if "pedido"         in df_prog.columns else None
@@ -1389,17 +1332,17 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
 
     headers = ["Produto"]
     values  = [df_prog[col_prod].tolist()]
-    cell_colors = [["rgba(255,255,255,0.04)"] * len(df_prog)]  # cor padrão da coluna produto
+    cell_colors = [[t["tr_par"]] * len(df_prog)]  # cor padrão da coluna produto
 
     if col_meta:
         headers.append("Meta (kg)")
         values.append(df_prog[col_meta].apply(lambda v: f"{v:,.0f}").tolist())
-        cell_colors.append(["rgba(255,255,255,0.04)"] * len(df_prog))
+        cell_colors.append([t["tr_par"]] * len(df_prog))
 
     if col_pedido:
         headers.append("Pedido (kg)")
         values.append(df_prog[col_pedido].apply(lambda v: f"{v:,.0f}").tolist())
-        cell_colors.append(["rgba(255,255,255,0.04)"] * len(df_prog))
+        cell_colors.append([t["tr_par"]] * len(df_prog))
 
     if col_prog:
         headers.append("Progresso (%)")
@@ -1423,31 +1366,30 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
         columnwidth=[250] + [120] * (len(headers) - 1),
         header=dict(
             values=headers,
-            fill_color="rgba(45,122,79,0.6)",
+            fill_color=t["header_table"],
             font=dict(color="white", size=11, family="DM Sans"),
             align="left",
             height=36,
-            line_color="rgba(255,255,255,0.1)",
+            line_color=t["tabela_borda"],
         ),
         cells=dict(
             values=values,
-            fill_color=["rgba(255,255,255,0.04)", "rgba(255,255,255,0.02)"],
-            font=dict(color="rgba(255,255,255,0.8)", size=11, family="DM Sans"),
+            fill_color=t["cell_color"],
+            font=dict(color=t["cell_font"], size=11, family="DM Sans"),
             align="left",
             height=30,
-            line_color="rgba(255,255,255,0.06)",
+            line_color=t["tabela_borda"],
         ),
     )])
     fig.update_layout(
         title=dict(
             text="Progresso de Metas — Benverde",
-            font=dict(size=16, family="DM Sans", color="white"),
+            font=dict(size=16, family="DM Sans", color=t["table_title"]),
             x=0.01,
         ),
         margin=dict(l=20, r=20, t=60, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="rgba(255,255,255,0.75)", family="DM Sans"),
+        paper_bgcolor=t["table_paper"],
+        font=dict(color=t["plot_font"], family="DM Sans"),
     )
     return fig
 
@@ -1882,6 +1824,7 @@ def _render_aba_metas() -> None:
 
     # Renderiza tabela com HTML para barras de progresso
     if not df_exibir.empty:
+        t = _get_tema()
         linhas_html = ""
         col_prod    = "Produtos"       if "Produtos"       in df_exibir.columns else df_exibir.columns[0]
         col_meta    = "meta"           if "meta"           in df_exibir.columns else None
@@ -1897,7 +1840,7 @@ def _render_aba_metas() -> None:
             status  = str(row.get(col_status, ""))
 
             is_banana = "BANANA" in produto.upper()
-            row_bg    = "background:rgba(245,200,66,0.12);" if is_banana else ""
+            row_bg    = f"background:{t['banana_row']};" if is_banana else ""
 
             linhas_html += (
                 f"<tr style='{row_bg}'>"
@@ -1912,18 +1855,18 @@ def _render_aba_metas() -> None:
             )
 
         tabela_html = f"""
-        <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:10px;margin-top:0.5rem">
+        <div style="overflow-x:auto;border:1px solid {t['tabela_borda']};border-radius:10px;margin-top:0.5rem">
         <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
             <thead>
-                <tr style="background:rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.1)">
-                    <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:rgba(255,255,255,0.7)">Produto</th>
-                    <th style="padding:0.7rem 0.8rem;text-align:right;font-weight:600;color:rgba(255,255,255,0.7)">Meta</th>
-                    <th style="padding:0.7rem 0.8rem;text-align:right;font-weight:600;color:rgba(255,255,255,0.7)">Pedido</th>
-                    <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:rgba(255,255,255,0.7)">Progresso</th>
-                    <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:rgba(255,255,255,0.7)">Status</th>
+                <tr style="background:{t['th_bg']};border-bottom:1px solid {t['tabela_borda']}">
+                    <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:{t['texto_th']}">Produto</th>
+                    <th style="padding:0.7rem 0.8rem;text-align:right;font-weight:600;color:{t['texto_th']}">Meta</th>
+                    <th style="padding:0.7rem 0.8rem;text-align:right;font-weight:600;color:{t['texto_th']}">Pedido</th>
+                    <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:{t['texto_th']}">Progresso</th>
+                    <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:{t['texto_th']}">Status</th>
                 </tr>
             </thead>
-            <tbody>{linhas_html}</tbody>
+            <tbody>{{linhas_html}}</tbody>
         </table>
         </div>
         """
@@ -1998,16 +1941,15 @@ def _render_aba_metas() -> None:
                 text=top10["Quantidade"].apply(lambda v: f"{v:,.1f}"),
                 textposition="outside",
             ))
+            t = _get_tema()
             fig.update_layout(
                 height=380,
                 margin=dict(l=0, r=60, t=10, b=10),
                 xaxis_title="Quantidade",
                 yaxis=dict(autorange="reversed"),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="rgba(255,255,255,0.75)", family="DM Sans", size=12),
+                **_plotly_base(t),
             )
-            fig.update_xaxes(showgrid=True, gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.12)")
+            fig.update_xaxes(showgrid=True, **_plotly_axes(t))
             st.plotly_chart(fig, width="stretch")
 
 
@@ -2122,15 +2064,14 @@ def _render_aba_estoque() -> None:
             yaxis="y2",
         ))
 
+        t = _get_tema()
         fig.update_layout(
             height=380,
             barmode="group",
             margin=dict(l=0, r=0, t=20, b=0),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="rgba(255,255,255,0.75)", family="DM Sans", size=12),
-            yaxis=dict(title="Quantidade (kg)", showgrid=True, gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.12)"),
+            **_plotly_base(t),
+            yaxis=dict(title="Quantidade (kg)", showgrid=True, **_plotly_axes(t)),
             yaxis2=dict(title="Saldo (kg)", overlaying="y", side="right", showgrid=False),
             xaxis=dict(showgrid=False),
         )
@@ -2165,9 +2106,8 @@ def _render_aba_estoque() -> None:
     fig_var.update_layout(
         height=300,
         margin=dict(l=0, r=0, t=20, b=0),
-        font=dict(family="DM Sans", size=12),
-        paper_bgcolor="rgba(0,0,0,0)",
         showlegend=True,
+        **_plotly_base(t),
     )
     fig_var.update_traces(textinfo="percent+label")
 
@@ -2340,9 +2280,10 @@ def _render_aba_precos() -> None:
         colunas_exibir_h = [col_prod_buscado] + col_precos + col_status
         colunas_exibir_h = [c for c in colunas_exibir_h if c in df_exibir.columns]
 
+        t = _get_tema()
         header_html = "".join(
             f"<th style='padding:0.7rem 0.8rem;text-align:{'right' if c in col_precos else 'left'};"
-            f"font-weight:600;color:rgba(255,255,255,0.7);white-space:nowrap'>{c}</th>"
+            f"font-weight:600;color:{t['texto_th']};white-space:nowrap'>{c}</th>"
             for c in colunas_exibir_h
         )
 
@@ -2350,7 +2291,7 @@ def _render_aba_precos() -> None:
         for _, row in df_exibir.iterrows():
             produto      = str(row.get(col_prod_buscado, ""))
             is_banana    = "BANANA" in produto.upper()
-            row_bg       = "background:rgba(245,200,66,0.12);" if is_banana else ""
+            row_bg       = f"background:{t['banana_row']};" if is_banana else ""
             # Pega o menor preço válido da linha como referência
             valores_preco = [float(row[c]) for c in col_precos
                              if c in row and pd.notna(row[c]) and row[c] != 0]
@@ -2385,17 +2326,17 @@ def _render_aba_precos() -> None:
             linhas_preco_html += f"<tr style='{row_bg}'>{celulas}</tr>"
 
         tabela_preco_html = f"""
-        <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:10px;margin-top:0.5rem">
+        <div style="overflow-x:auto;border:1px solid {t['tabela_borda']};border-radius:10px;margin-top:0.5rem">
         <table style="width:100%;border-collapse:collapse;font-size:0.86rem">
             <thead>
-                <tr style="background:rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.1)">
-                    {header_html}
+                <tr style="background:{t['th_bg']};border-bottom:1px solid {t['tabela_borda']}">
+                    {{header_html}}
                 </tr>
             </thead>
-            <tbody>{linhas_preco_html}</tbody>
+            <tbody>{{linhas_preco_html}}</tbody>
         </table>
         </div>
-        <p style='font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.4rem'>
+        <p style='font-size:0.78rem;color:{t['texto_suave']};margin-top:0.4rem'>
             🟢 Menor preço &nbsp; 🟠 Maior preço &nbsp; 🟡 Fundo = banana
         </p>
         """
@@ -2437,14 +2378,13 @@ def _render_aba_precos() -> None:
                 text="Preço (R$)",
             )
             fig_comp.update_traces(texttemplate="R$%{text:.2f}", textposition="outside")
+            t_p = _get_tema()
             fig_comp.update_layout(
                 height=360,
                 margin=dict(l=0, r=0, t=20, b=80),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="rgba(255,255,255,0.75)", family="DM Sans", size=12),
+                **_plotly_base(t_p),
                 xaxis=dict(showgrid=False, tickangle=-20),
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", zerolinecolor="rgba(255,255,255,0.12)", title="Preço (R$)"),
+                yaxis=dict(showgrid=True, title="Preço (R$)", **_plotly_axes(t_p)),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             )
             st.plotly_chart(fig_comp, width="stretch")
@@ -2458,6 +2398,7 @@ def _render_aba_precos() -> None:
 
 def _tabela_caixas_fig(df_exibir: pd.DataFrame) -> "go.Figure":
     """Gera figura Plotly da tabela de caixas para exportação."""
+    t = _get_tema()
     colunas_header = ["Data", "Loja", "Nº Loja",
                       "Benverde", "CCJ", "Bananas", "Total", "Entregue?"]
     colunas_dados  = ["data", "loja", "n_loja",
@@ -2480,7 +2421,7 @@ def _tabela_caixas_fig(df_exibir: pd.DataFrame) -> "go.Figure":
             valores.append([""] * len(df_exibir))
 
     n = len(df_exibir)
-    cores_linha = ["rgba(255,255,255,0.04)" if i % 2 == 0 else "rgba(255,255,255,0.02)" for i in range(n)]
+    cores_linha = [t["tr_par"] if i % 2 == 0 else t["tr_impar"] for i in range(n)]
     cell_colors = [cores_linha] * (len(colunas_header) - 1)
     # Coluna Entregue com badge colorido
     entregue_cores = [
@@ -2493,29 +2434,28 @@ def _tabela_caixas_fig(df_exibir: pd.DataFrame) -> "go.Figure":
         columnwidth=[90, 160, 70, 100, 80, 100, 70, 90],
         header=dict(
             values=colunas_header,
-            fill_color="rgba(45,122,79,0.6)",
+            fill_color=t["header_table"],
             font=dict(color="white", size=11, family="DM Sans"),
             align="center",
             height=34,
-            line_color="rgba(255,255,255,0.1)",
+            line_color=t["tabela_borda"],
         ),
         cells=dict(
             values=valores,
-            fill_color=["rgba(255,255,255,0.04)", "rgba(255,255,255,0.02)"],
-            font=dict(color="rgba(255,255,255,0.8)", size=11, family="DM Sans"),
+            fill_color=t["cell_color"],
+            font=dict(color=t["cell_font"], size=11, family="DM Sans"),
             align=["center", "left", "center", "center", "center", "center", "center", "center"],
             height=28,
-            line_color="rgba(255,255,255,0.06)",
+            line_color=t["tabela_borda"],
         ),
     )])
     fig.update_layout(
         margin=dict(l=10, r=10, t=30, b=10),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="rgba(255,255,255,0.75)", family="DM Sans"),
+        paper_bgcolor=t["table_paper"],
+        font=dict(color=t["plot_font"], family="DM Sans"),
         title=dict(
             text="Relatório de Caixas — Benverde",
-            font=dict(size=14, family="DM Sans", color="white"),
+            font=dict(size=14, family="DM Sans", color=t["table_title"]),
             x=0.01,
         ),
     )
@@ -2590,18 +2530,19 @@ def _render_aba_caixas() -> None:
     if df_filtrado.empty:
         st.info("Nenhum registro com os filtros aplicados.")
     else:
+        t = _get_tema()
         linhas_html = ""
         for i, row in df_filtrado.iterrows():
-            bg = "rgba(255,255,255,0.04)" if i % 2 == 0 else "rgba(255,255,255,0.02)"
+            bg = t["tr_par"] if i % 2 == 0 else t["tr_impar"]
             data_fmt = (
                 __import__("datetime").datetime.strptime(str(row["data"]), "%Y-%m-%d").strftime("%d/%m/%Y")
                 if len(str(row["data"])) == 10 else str(row["data"])
             )
             entregue_val = str(row.get("entregue", "")).lower()
             if entregue_val == "sim":
-                badge = "<span style='background:rgba(16,185,129,0.2);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3);padding:2px 10px;border-radius:99px;font-size:0.78rem;font-weight:600'>sim</span>"
+                badge = f"<span style='background:{t['badge_sim_bg']};color:{t['badge_sim_fg']};border:1px solid {t['badge_sim_bd']};padding:2px 10px;border-radius:99px;font-size:0.78rem;font-weight:600'>sim</span>"
             else:
-                badge = "<span style='background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.3);padding:2px 10px;border-radius:99px;font-size:0.78rem;font-weight:600'>não</span>"
+                badge = f"<span style='background:{t['badge_nao_bg']};color:{t['badge_nao_fg']};border:1px solid {t['badge_nao_bd']};padding:2px 10px;border-radius:99px;font-size:0.78rem;font-weight:600'>não</span>"
 
             linhas_html += (
                 f"<tr style='background:{bg}'>"
@@ -2617,10 +2558,10 @@ def _render_aba_caixas() -> None:
             )
 
         tabela_html = f"""
-        <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:10px;margin-top:0.5rem">
+        <div style="overflow-x:auto;border:1px solid {t['tabela_borda']};border-radius:10px;margin-top:0.5rem">
         <table style="width:100%;border-collapse:collapse;font-size:0.87rem">
             <thead>
-                <tr style="background:rgba(45,122,79,0.5)">
+                <tr style="background:{t['thead_caixas']}">
                     <th style="padding:0.65rem 0.8rem;text-align:left;color:white;font-weight:600">DATA</th>
                     <th style="padding:0.65rem 0.8rem;text-align:left;color:white;font-weight:600">LOJA</th>
                     <th style="padding:0.65rem 0.8rem;text-align:center;color:white;font-weight:600">Nº LOJA</th>
@@ -2631,7 +2572,7 @@ def _render_aba_caixas() -> None:
                     <th style="padding:0.65rem 0.8rem;text-align:center;color:white;font-weight:600">ENTREGUE?</th>
                 </tr>
             </thead>
-            <tbody>{linhas_html}</tbody>
+            <tbody>{{linhas_html}}</tbody>
         </table>
         </div>
         """
@@ -2667,6 +2608,7 @@ def _render_aba_caixas() -> None:
 def main() -> None:
     """Ponto de entrada do aplicativo Streamlit."""
     _init_state()
+    _render_css_tema()
     _render_sidebar()
 
     # ---- Header ----
