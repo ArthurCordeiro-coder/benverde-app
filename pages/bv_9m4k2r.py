@@ -728,7 +728,7 @@ if not st.session_state["autenticado"]:
 # ---------------------------------------------------------------------------
 # Defaults de caminhos
 # ---------------------------------------------------------------------------
-_DEFAULT_CAIXAS_JSON     = r"benverde-app\benverde-app\dados\cache\caixas_lojas.json"
+_DEFAULT_CAIXAS_JSON     = r"benverde-app\dados\cache\caixas_lojas.json"
 _DEFAULT_PASTA_PRECOS    = r"benverde-app\dados\precos"
 _DEFAULT_PASTA_PEDIDOS   = r"benverde-app\dados\pedidos_nfe"
 _DEFAULT_PASTA_ENTRADAS  = r"benverde-app\dados\entradas_bananas"
