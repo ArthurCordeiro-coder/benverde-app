@@ -1,0 +1,243 @@
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://192.168.0.32:8501
+  External URL: http://177.34.198.63:8501
+
+2026-03-02 14:25:45,490 [INFO] Preços carregados: 02-03-2026 → 43 linhas.
+2026-03-02 14:25:45,506 [INFO] Preços carregados: 19-02-2026 → 43 linhas.
+2026-03-02 14:25:45,522 [INFO] Preços carregados: 20-02-2026 → 43 linhas.
+2026-03-02 14:25:45,540 [INFO] Preços carregados: 21-02-2026 → 43 linhas.
+2026-03-02 14:25:45,557 [INFO] Preços carregados: 23-02-2026 → 43 linhas.
+2026-03-02 14:25:45,572 [INFO] Preços carregados: 24-02-2026 → 43 linhas.
+2026-03-02 14:25:45,591 [INFO] Preços carregados: 25-02-2026 → 43 linhas.
+2026-03-02 14:25:45,607 [INFO] Preços carregados: 26-02-2026 → 43 linhas.
+2026-03-02 14:25:45,625 [INFO] Preços carregados: 27-02-2026 → 43 linhas.
+2026-03-02 14:25:45,626 [INFO] Preços carregados: 9 arquivo(s).
+2026-03-02 14:25:45,660 [INFO] Processando 1476 PDF(s) novo(s) com 10 workers...
+2026-03-02 14:25:48.477 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.478 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.533 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.534 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.592 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.593 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.644 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.645 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.713 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.713 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.760 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.762 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.826 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.826 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.887 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.888 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.932 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.933 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.966 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:48.967 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.267 WARNING streamlit:
+  Warning: to view a Streamlit app on a browser, use Streamlit in a file and
+  run it with the following command:
+
+    streamlit run [FILE_NAME] [ARGUMENTS]
+2026-03-02 14:25:49.268 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.269 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.269 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=11856, pipe_handle=1036)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 131, in _main
+    prepare(preparation_data)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 246, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 297, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+                                  run_name="__mp_main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\app.py", line 23, in <module>
+    st.switch_page("pages/3_Registro_Caixas.py")
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\runtime\metrics_util.py", line 532, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\commands\execution_control.py", line 273, in switch_page
+    raise NoSessionContext()
+streamlit.errors.NoSessionContext
+2026-03-02 14:25:49.315 WARNING streamlit:
+  Warning: to view a Streamlit app on a browser, use Streamlit in a file and
+  run it with the following command:
+
+    streamlit run [FILE_NAME] [ARGUMENTS]
+2026-03-02 14:25:49.316 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.316 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.317 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=11856, pipe_handle=1632)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 131, in _main
+    prepare(preparation_data)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 246, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 297, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+                                  run_name="__mp_main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\app.py", line 23, in <module>
+    st.switch_page("pages/3_Registro_Caixas.py")
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\runtime\metrics_util.py", line 532, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\commands\execution_control.py", line 273, in switch_page
+    raise NoSessionContext()
+streamlit.errors.NoSessionContext
+2026-03-02 14:25:49.391 WARNING streamlit:
+  Warning: to view a Streamlit app on a browser, use Streamlit in a file and
+  run it with the following command:
+
+    streamlit run [FILE_NAME] [ARGUMENTS]
+2026-03-02 14:25:49.391 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.392 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.392 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=11856, pipe_handle=1768)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 131, in _main
+    prepare(preparation_data)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 246, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 297, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+                                  run_name="__mp_main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\app.py", line 23, in <module>
+    st.switch_page("pages/3_Registro_Caixas.py")
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\runtime\metrics_util.py", line 532, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\commands\execution_control.py", line 273, in switch_page
+    raise NoSessionContext()
+streamlit.errors.NoSessionContext
+2026-03-02 14:25:49.451 WARNING streamlit:
+  Warning: to view a Streamlit app on a browser, use Streamlit in a file and
+  run it with the following command:
+
+    streamlit run [FILE_NAME] [ARGUMENTS]
+2026-03-02 14:25:49.451 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.452 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2026-03-02 14:25:49.452 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    from multiprocessing.spawn import spawn_main; spawn_main(parent_pid=11856, pipe_handle=1780)
+                                                  ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 122, in spawn_main
+    exitcode = _main(fd, parent_sentinel)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 131, in _main
+    prepare(preparation_data)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 246, in prepare
+    _fixup_main_from_path(data['init_main_from_path'])
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\Lib\multiprocessing\spawn.py", line 297, in _fixup_main_from_path
+    main_content = runpy.run_path(main_path,
+                                  run_name="__mp_main__")
+  File "<frozen runpy>", line 287, in run_path
+  File "<frozen runpy>", line 98, in _run_module_code
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\app.py", line 23, in <module>
+    st.switch_page("pages/3_Registro_Caixas.py")
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\runtime\metrics_util.py", line 532, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\env_app\Lib\site-packages\streamlit\commands\execution_control.py", line 273, in switch_page
+    raise NoSessionContext()
+streamlit.errors.NoSessionContext
+2026-03-02 14:25:49,497 [WARNING] Pool encerrado ao processar 'C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\pedidos_nfe\0101_loja05.pdf'. Restantes serão processados sequencialmente.
+2026-03-02 14:25:49,917 [INFO] [PDF] '0101_loja05.pdf' → 13 produto(s).
+2026-03-02 14:25:49,924 [INFO] Concluído: 1/1476 PDFs.
+2026-03-02 14:25:49,961 [INFO] Pedidos NF-e: 73 linhas | Metas: 15 produto(s).
+2026-03-02 14:25:49,964 [INFO] Estoque calculado: saldo=21205.00 kg, 39 registros (39 manuais).
+2026-03-02 14:25:50,646 [INFO] Chromium init'ed with kwargs {}
+2026-03-02 14:25:50,668 [INFO] Found chromium path: C:\Program Files\Google\Chrome\Application\chrome.exe
+2026-03-02 14:25:50,672 [INFO] Temp directory created: C:\Users\pesso\AppData\Local\Temp\tmpq6vzfple.
+2026-03-02 14:25:50,674 [INFO] Opening browser.
+2026-03-02 14:25:50,676 [INFO] Temp directory created: C:\Users\pesso\AppData\Local\Temp\tmpnzflvzbs.
+2026-03-02 14:25:50,676 [INFO] Temporary directory at: C:\Users\pesso\AppData\Local\Temp\tmpnzflvzbs
+2026-03-02 14:25:51,524 [INFO] Conforming 1 to file:///C:/Users/pesso/AppData/Local/Temp/tmpq6vzfple/index.html
+2026-03-02 14:25:51,525 [INFO] Waiting on all navigates
+2026-03-02 14:25:53,293 [INFO] All navigates done, putting them all in queue.
+2026-03-02 14:25:53,294 [INFO] Getting tab from queue (has 1)
+2026-03-02 14:25:53,294 [INFO] Got 232E
+2026-03-02 14:25:53,295 [INFO] Processing Progresso_de_Metas__Benverde.jpeg
+2026-03-02 14:25:53,295 [INFO] Sending big command for Progresso_de_Metas__Benverde.jpeg.
+2026-03-02 14:25:53,480 [INFO] Sent big command for Progresso_de_Metas__Benverde.jpeg.
+2026-03-02 14:25:53,484 [INFO] Reloading tab 232E before return.
+2026-03-02 14:25:53,628 [INFO] Putting tab 232E back (queue size: 0).
+2026-03-02 14:25:53,629 [INFO] Waiting for all cleanups to finish.
+2026-03-02 14:25:53,629 [INFO] Exiting Kaleido
+2026-03-02 14:25:53,629 [INFO] Closing browser.
+2026-03-02 14:25:53,669 [INFO] Closing browser.
+2026-03-02 14:25:53,671 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:53,673 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:53,673 [INFO] Cancelling tasks.
+2026-03-02 14:25:53,674 [INFO] Exiting Kaleido/Choreo
+2026-03-02 14:25:53,956 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:53,956 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:53,957 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:53,957 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:53,958 [INFO] Cancelling tasks.
+2026-03-02 14:25:53,958 [INFO] Exiting Kaleido/Choreo
+2026-03-02 14:25:53,964 [INFO] Chromium init'ed with kwargs {}
+2026-03-02 14:25:53,965 [INFO] Found chromium path: C:\Program Files\Google\Chrome\Application\chrome.exe
+2026-03-02 14:25:53,966 [INFO] Temp directory created: C:\Users\pesso\AppData\Local\Temp\tmp3fhhrsf4.
+2026-03-02 14:25:53,968 [INFO] Opening browser.
+2026-03-02 14:25:53,969 [INFO] Temp directory created: C:\Users\pesso\AppData\Local\Temp\tmp4xw7e305.
+2026-03-02 14:25:53,970 [INFO] Temporary directory at: C:\Users\pesso\AppData\Local\Temp\tmp4xw7e305
+2026-03-02 14:25:54,574 [INFO] Conforming 1 to file:///C:/Users/pesso/AppData/Local/Temp/tmp3fhhrsf4/index.html
+2026-03-02 14:25:54,575 [INFO] Waiting on all navigates
+2026-03-02 14:25:57,015 [INFO] All navigates done, putting them all in queue.
+2026-03-02 14:25:57,016 [INFO] Getting tab from queue (has 1)
+2026-03-02 14:25:57,017 [INFO] Got 1E76
+2026-03-02 14:25:57,017 [INFO] Processing Progresso_de_Metas__Benverde.pdf
+2026-03-02 14:25:57,017 [INFO] Sending big command for Progresso_de_Metas__Benverde.pdf.
+2026-03-02 14:25:57,218 [INFO] Sent big command for Progresso_de_Metas__Benverde.pdf.
+2026-03-02 14:25:57,575 [INFO] Reloading tab 1E76 before return.
+2026-03-02 14:25:57,813 [INFO] Putting tab 1E76 back (queue size: 0).
+2026-03-02 14:25:57,814 [INFO] Waiting for all cleanups to finish.
+2026-03-02 14:25:57,815 [INFO] Exiting Kaleido
+2026-03-02 14:25:57,815 [INFO] Closing browser.
+2026-03-02 14:25:57,895 [INFO] Closing browser.
+2026-03-02 14:25:57,897 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:57,901 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:57,904 [INFO] Cancelling tasks.
+2026-03-02 14:25:57,905 [INFO] Exiting Kaleido/Choreo
+2026-03-02 14:25:58,381 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:58,382 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:58,382 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:58,383 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:58,383 [INFO] Cancelling tasks.
+2026-03-02 14:25:58,384 [INFO] Exiting Kaleido/Choreo
+2026-03-02 14:25:58,603 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:58,604 [INFO] shutil.rmtree worked.
+2026-03-02 14:25:59,330 [INFO] TemporaryDirectory.cleanup() worked.
+2026-03-02 14:25:59,330 [INFO] shutil.rmtree worked.

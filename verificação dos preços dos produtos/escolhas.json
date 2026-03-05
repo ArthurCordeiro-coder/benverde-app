@@ -1,0 +1,658 @@
+{
+  "rossi": {
+    "alface americana": {
+      "produto_id": 14264,
+      "descricao": "Alface Americana Band Un"
+    },
+    "alface crespa": {
+      "produto_id": 14281,
+      "descricao": "Alface Crespa Un"
+    },
+    "alface crespa hidroponica": null,
+    "alface crespa roxo": null,
+    "alface lisa": {
+      "produto_id": 14142,
+      "descricao": "Alface Lisa"
+    },
+    "alface lisa hidroponica": {
+      "produto_id": 14235,
+      "descricao": "Alface Lisa Hidropônica"
+    },
+    "alface lisa higienizado": null,
+    "alface mimosa hidroponica": null,
+    "brocolis": {
+      "produto_id": 14163,
+      "descricao": "Brócolis Comum"
+    },
+    "couve": {
+      "produto_id": 14234,
+      "descricao": "Couve Manteiga"
+    },
+    "couve flor": {
+      "produto_id": 14150,
+      "descricao": "Couve Flor Un Hortella"
+    },
+    "couve higienizado": null,
+    "repolho roxa": null,
+    "repolho verde": {
+      "produto_id": 11953,
+      "descricao": "Repolho Verde Kg"
+    },
+    "abobrinha italiana": null,
+    "batata doce rosada": {
+      "produto_id": 12059,
+      "descricao": "Batata Doce Rosada 500g"
+    },
+    "batata lavada": {
+      "produto_id": 14942,
+      "descricao": "Batata Lavada 500g"
+    },
+    "beringela": null,
+    "beterraba": {
+      "produto_id": 12033,
+      "descricao": "Beterraba 700g"
+    },
+    "cebola": {
+      "produto_id": 15064,
+      "descricao": "Cebola 1kg"
+    },
+    "cenoura": {
+      "produto_id": 12044,
+      "descricao": "Cenoura 500g"
+    },
+    "chuchu": {
+      "produto_id": 11906,
+      "descricao": "Chuchu 750g"
+    },
+    "mandioca": {
+      "produto_id": 18754,
+      "descricao": "Mandioca 1kg"
+    },
+    "pepino comum": {
+      "produto_id": 12107,
+      "descricao": "Pepino Comum 500g"
+    },
+    "pepino japones": {
+      "produto_id": 11978,
+      "descricao": "Pepino Japones 500g"
+    },
+    "pimentao amarelo": {
+      "produto_id": 12261,
+      "descricao": "Pimentão Amarelo 500g"
+    },
+    "pimentao verde": {
+      "produto_id": 11781,
+      "descricao": "Pimentão Verde 500g"
+    },
+    "pimentao vermelho": {
+      "produto_id": 11821,
+      "descricao": "Pimentão Vermelho 500g"
+    },
+    "tomate": {
+      "produto_id": 11775,
+      "descricao": "Tomate Salada 500g"
+    },
+    "tomate italiano": {
+      "produto_id": 14998,
+      "descricao": "Tomate Italiano 500g"
+    },
+    "banana nanica": {
+      "produto_id": 12164,
+      "descricao": "Banana Nanica 500g"
+    },
+    "banana prata": {
+      "produto_id": 12170,
+      "descricao": "Banana Prata 500g"
+    },
+    "banana terra": {
+      "produto_id": 18593,
+      "descricao": "Banana Da Terra Kg"
+    },
+    "goiaba": {
+      "produto_id": 11907,
+      "descricao": "Goiaba Vermelha 500g"
+    },
+    "laranja pera": {
+      "produto_id": 11811,
+      "descricao": "Laranja Pera 1kg"
+    },
+    "limao": {
+      "produto_id": 8648,
+      "descricao": "Limão 500g"
+    },
+    "maca argentina": {
+      "produto_id": 12285,
+      "descricao": "Maça Argentina Red 600g"
+    },
+    "maca fuji": null,
+    "maca gala": {
+      "produto_id": 11880,
+      "descricao": "Maça Gala 1kg"
+    },
+    "maca gransmith": {
+      "produto_id": 12218,
+      "descricao": "Maça Gransmith 500g"
+    },
+    "mamao papaya": {
+      "produto_id": 12354,
+      "descricao": "Mamão Papaya 1kg"
+    },
+    "mamao formosa": {
+      "produto_id": 12314,
+      "descricao": "Mamão Formosa 1,8kg"
+    },
+    "manga palmer": {
+      "produto_id": 11940,
+      "descricao": "Manga Palmer 1kg"
+    },
+    "manga tommy": {
+      "produto_id": 23853,
+      "descricao": "Manga Tommy 1kg"
+    },
+    "maracuja azedo": {
+      "produto_id": 18753,
+      "descricao": "Maracujá Azedo 1kg"
+    },
+    "melao amarelo": {
+      "produto_id": 12149,
+      "descricao": "Melão Amarelo 2,3kg"
+    },
+    "pera willians": {
+      "produto_id": 12196,
+      "descricao": "Pera Willians 500g"
+    },
+    "abacate": {
+      "produto_id": 8586,
+      "descricao": "Abacate 600g"
+    }
+  },
+  "alabarce": {
+    "alface americana": {
+      "produto_id": null,
+      "descricao": "ALFACE AMERICANA MAÇO"
+    },
+    "alface crespa": {
+      "produto_id": null,
+      "descricao": "ALFACE CRESPA MAÇO"
+    },
+    "alface crespa hidroponica": {
+      "produto_id": null,
+      "descricao": "ALFACE CRESPA HIDROPÔNICA TOMITA MAÇO"
+    },
+    "alface crespa roxo": null,
+    "alface lisa": {
+      "produto_id": null,
+      "descricao": "ALFACE LISA MAÇO"
+    },
+    "alface lisa hidroponica": null,
+    "alface lisa higienizado": null,
+    "alface mimosa hidroponica": null,
+    "brocolis": {
+      "produto_id": null,
+      "descricao": "BRÓCOLIS NINJA 300G UNIDADE"
+    },
+    "couve": {
+      "produto_id": null,
+      "descricao": "COUVE MANTEIGA MAÇO"
+    },
+    "couve flor": {
+      "produto_id": null,
+      "descricao": "COUVE FLOR ORGANICO 350G RIO DE UNA"
+    },
+    "couve higienizado": null,
+    "repolho roxa": null,
+    "repolho verde": null,
+    "abobrinha italiana": {
+      "produto_id": null,
+      "descricao": "ABOBRINHA ITALIANA KG"
+    },
+    "batata doce rosada": {
+      "produto_id": null,
+      "descricao": "BATATA CHIPS BRASIL FRUTT ROSADA DOCE 100G"
+    },
+    "batata lavada": {
+      "produto_id": null,
+      "descricao": "BATATA LAVADA KG"
+    },
+    "beringela": null,
+    "beterraba": {
+      "produto_id": null,
+      "descricao": "BETERRABA KG"
+    },
+    "cebola": {
+      "produto_id": null,
+      "descricao": "CEBOLA NACIONAL KG"
+    },
+    "cenoura": {
+      "produto_id": null,
+      "descricao": "CENOURA KG"
+    },
+    "chuchu": {
+      "produto_id": null,
+      "descricao": "CHUCHU KG"
+    },
+    "mandioca": {
+      "produto_id": null,
+      "descricao": "MANDIOCA 500G VAPZA"
+    },
+    "pepino comum": null,
+    "pepino japones": {
+      "produto_id": null,
+      "descricao": "PEPINO JAPONÊS KG"
+    },
+    "pimentao amarelo": {
+      "produto_id": null,
+      "descricao": "PIMENTÃO AMARELO KG"
+    },
+    "pimentao verde": {
+      "produto_id": null,
+      "descricao": "PIMENTÃO VERDE KG"
+    },
+    "pimentao vermelho": {
+      "produto_id": null,
+      "descricao": "PIMENTÃO VERMELHO KG"
+    },
+    "tomate": null,
+    "tomate italiano": {
+      "produto_id": null,
+      "descricao": "TOMATE ITALIANO KG"
+    },
+    "banana nanica": {
+      "produto_id": null,
+      "descricao": "BANANA NANICA KG"
+    },
+    "banana prata": {
+      "produto_id": null,
+      "descricao": "BANANA PRATA KG"
+    },
+    "banana terra": {
+      "produto_id": null,
+      "descricao": "BANANA TERRA KG"
+    },
+    "goiaba": {
+      "produto_id": null,
+      "descricao": "GOIABA VERMELHA KG"
+    },
+    "laranja pera": {
+      "produto_id": null,
+      "descricao": "LARANJA PERA KG"
+    },
+    "limao": {
+      "produto_id": null,
+      "descricao": "LIMÃO TAITI KG"
+    },
+    "maca argentina": null,
+    "maca fuji": {
+      "produto_id": null,
+      "descricao": "MAÇÃ FUJI KG"
+    },
+    "maca gala": {
+      "produto_id": null,
+      "descricao": "MAÇÃ GALA ESPECIAL KG"
+    },
+    "maca gransmith": null,
+    "mamao papaya": {
+      "produto_id": null,
+      "descricao": "MAMÃO PAPAYA KG"
+    },
+    "mamao formosa": {
+      "produto_id": null,
+      "descricao": "MAMÃO FORMOSA KG"
+    },
+    "manga palmer": {
+      "produto_id": null,
+      "descricao": "MANGA PALMER KG"
+    },
+    "manga tommy": {
+      "produto_id": null,
+      "descricao": "MANGA TOMMY KG"
+    },
+    "maracuja azedo": {
+      "produto_id": null,
+      "descricao": "MARACUJÁ AZEDO KG"
+    },
+    "melao amarelo": {
+      "produto_id": null,
+      "descricao": "MELÃO AMARELO KG"
+    },
+    "pera willians": null,
+    "abacate": {
+      "produto_id": null,
+      "descricao": "ABACATE KG"
+    }
+  },
+  "shibata": {
+    "alface americana": {
+      "produto_id": 26415,
+      "descricao": "Alface Americana Takagaki - 170g"
+    },
+    "alface crespa": {
+      "produto_id": 23006,
+      "descricao": "Alface Crespa - 1 Unidade"
+    },
+    "alface crespa hidroponica": {
+      "produto_id": 34739,
+      "descricao": "Alface Crespa Hidropônica Mizuguchi - 1 Unidade"
+    },
+    "alface crespa roxo": null,
+    "alface lisa": {
+      "produto_id": 22096,
+      "descricao": "Alface Lisa - 1 Unidade"
+    },
+    "alface lisa hidroponica": {
+      "produto_id": 26344,
+      "descricao": "Alface Lisa Hidropônica - 1 Unidade"
+    },
+    "alface lisa higienizado": null,
+    "alface mimosa hidroponica": {
+      "produto_id": 26347,
+      "descricao": "Alface Mimosa Hidropônica Kimoto - 1 Unidade"
+    },
+    "brocolis": {
+      "produto_id": 11374,
+      "descricao": "Brocolis Pratigel 300g"
+    },
+    "couve": {
+      "produto_id": 22872,
+      "descricao": "Couve Flor - 1 Unidade"
+    },
+    "couve flor": {
+      "produto_id": 22872,
+      "descricao": "Couve Flor - 1 Unidade"
+    },
+    "couve higienizado": {
+      "produto_id": 26421,
+      "descricao": "Couve Flor Higienizado - 300g"
+    },
+    "repolho roxa": null,
+    "repolho verde": {
+      "produto_id": 16498,
+      "descricao": "Repolho Verde - 1 Unidade (aprox. 1,2Kg)"
+    },
+    "abobrinha italiana": {
+      "produto_id": 16678,
+      "descricao": "Abobrinha Italiana - 1 Unidade"
+    },
+    "batata doce rosada": {
+      "produto_id": 16620,
+      "descricao": "Batata Doce Rosada - 900g (aprox. 1 Unidade)"
+    },
+    "batata lavada": {
+      "produto_id": 16469,
+      "descricao": "Batata Lavada - 1 Unidade"
+    },
+    "beringela": null,
+    "beterraba": {
+      "produto_id": 16621,
+      "descricao": "Beterraba - 1 Unidade"
+    },
+    "cebola": {
+      "produto_id": 8771,
+      "descricao": "Cebola Granulada Kitano 50gr"
+    },
+    "cenoura": {
+      "produto_id": 16720,
+      "descricao": "Cenoura - 1 Unidade"
+    },
+    "chuchu": {
+      "produto_id": 16531,
+      "descricao": "Chuchu - 1 Unidade"
+    },
+    "mandioca": {
+      "produto_id": 26390,
+      "descricao": "Mandioca Takagaki - 900g"
+    },
+    "pepino comum": {
+      "produto_id": 16677,
+      "descricao": "Pepino Comum - 1 Unidade"
+    },
+    "pepino japones": {
+      "produto_id": 16567,
+      "descricao": "Pepino Japonês - 1 Unidade"
+    },
+    "pimentao amarelo": {
+      "produto_id": 16283,
+      "descricao": "Pimentão Amarelo - 1 Unidade"
+    },
+    "pimentao verde": {
+      "produto_id": 16722,
+      "descricao": "Pimentão Verde - 1 Unidade"
+    },
+    "pimentao vermelho": {
+      "produto_id": 16608,
+      "descricao": "Pimentão Vermelho - 1 Unidade"
+    },
+    "tomate": {
+      "produto_id": 16486,
+      "descricao": "Tomate Italiano - 1 Unidade"
+    },
+    "tomate italiano": {
+      "produto_id": 16486,
+      "descricao": "Tomate Italiano - 1 Unidade"
+    },
+    "banana nanica": {
+      "produto_id": 16286,
+      "descricao": "Banana Nanica - 1,4Kg (Aprox. 6 Unidades)"
+    },
+    "banana prata": {
+      "produto_id": 16465,
+      "descricao": "Banana Prata - 1,1kg - Aprox. 8 Unidades"
+    },
+    "banana terra": null,
+    "goiaba": {
+      "produto_id": 16293,
+      "descricao": "Goiaba Vermelha - 1 Unidade"
+    },
+    "laranja pera": {
+      "produto_id": 16723,
+      "descricao": "Laranja Pera - 1 Unidade"
+    },
+    "limao": {
+      "produto_id": 16227,
+      "descricao": "Limao Tahiti - 1 Unidade"
+    },
+    "maca argentina": null,
+    "maca fuji": {
+      "produto_id": 16281,
+      "descricao": "Maçã Fuji - 1 Unidade"
+    },
+    "maca gala": {
+      "produto_id": 16491,
+      "descricao": "Maçã Gala - 1 Unidade"
+    },
+    "maca gransmith": {
+      "produto_id": 16403,
+      "descricao": "Maça Gransmith - 1 Unidade"
+    },
+    "mamao papaya": {
+      "produto_id": 16496,
+      "descricao": "Mamão Papaya - 1 Unidade"
+    },
+    "mamao formosa": {
+      "produto_id": 16651,
+      "descricao": "Mamão Formosa - 1 Unidade"
+    },
+    "manga palmer": {
+      "produto_id": 16418,
+      "descricao": "Manga Palmer - 1 Unidade"
+    },
+    "manga tommy": {
+      "produto_id": 16427,
+      "descricao": "Manga Tommy - 1 Unidade"
+    },
+    "maracuja azedo": {
+      "produto_id": 16228,
+      "descricao": "Maracujá Azedo - 1 Unidade"
+    },
+    "melao amarelo": {
+      "produto_id": 16554,
+      "descricao": "Melão Amarelo - 1 Unidade"
+    },
+    "pera willians": null,
+    "abacate": {
+      "produto_id": 16570,
+      "descricao": "Abacate - 1 Unidade"
+    }
+  },
+  "semar": {
+    "alface americana": {
+      "produto_id": 16146,
+      "descricao": "Alface Americana Benverde 1 Unidade"
+    },
+    "alface crespa": {
+      "produto_id": 10436,
+      "descricao": "Alface Crespa Benverde 1 Unidade"
+    },
+    "alface crespa hidroponica": {
+      "produto_id": 11458,
+      "descricao": "Alface Crespa Benverde Hidropônica 1 Unidade"
+    },
+    "alface crespa roxo": null,
+    "alface lisa": null,
+    "alface lisa hidroponica": {
+      "produto_id": 11462,
+      "descricao": "Alface Lisa Benverde Hidroponica Un"
+    },
+    "alface lisa higienizado": null,
+    "alface mimosa hidroponica": {
+      "produto_id": 11548,
+      "descricao": "Alface Mimosa Benverde Hidroponica Un"
+    },
+    "brocolis": {
+      "produto_id": 20522,
+      "descricao": "Brocolis Ninja Benverde 280g"
+    },
+    "couve": {
+      "produto_id": 19866,
+      "descricao": "Couve Flor Benverde 280g"
+    },
+    "couve flor benverde 280g": {
+      "produto_id": 19866,
+      "descricao": "Couve Flor Benverde 280g"
+    },
+    "couve higienizado": {
+      "produto_id": 4475,
+      "descricao": "Couve Manteiga Higienizado Benverde 200g"
+    },
+    "repolho roxo": {
+      "produto_id": 14598,
+      "descricao": "Repolho Roxo 1.3kg"
+    },
+    "repolho verde kg": null,
+    "abobrinha italiana": {
+      "produto_id": 22145,
+      "descricao": "Abobrinha Italiana Benverde Bdj 600g "
+    },
+    "couve flor": null,
+    "repolho roxa": null,
+    "repolho verde": {
+      "produto_id": 18702,
+      "descricao": "Repolho Verde Benverde Higienizado Fatiado 300g"
+    },
+    "batata doce rosada": {
+      "produto_id": 11955,
+      "descricao": "Batata Doce Rosada 800g (aproximadamente 2 Unidades)"
+    },
+    "batata lavada": {
+      "produto_id": 11647,
+      "descricao": "Batata Lavada 500g (aproximadamente 2 Unidades)"
+    },
+    "beringela": null,
+    "beterraba": {
+      "produto_id": 22140,
+      "descricao": "Beterraba Benverde Bdj 500g"
+    },
+    "cebola": {
+      "produto_id": 28558,
+      "descricao": "Cebola Roxa Bdj Kg (aprox 500g)"
+    },
+    "cenoura": {
+      "produto_id": 22146,
+      "descricao": "Cenoura Benverde Bdj 500g"
+    },
+    "chuchu": {
+      "produto_id": 14775,
+      "descricao": "Chuchu 600g (aproximadamente 2 Unidades)"
+    },
+    "mandioca": {
+      "produto_id": 10527,
+      "descricao": "Mandioca 700g"
+    },
+    "pepino comum": {
+      "produto_id": 11790,
+      "descricao": "Pepino Comum 600g (aproximadamente 2 Unidades)"
+    },
+    "pepino japones": {
+      "produto_id": 22141,
+      "descricao": "Pepino Japonês Benverde Bdj 500g"
+    },
+    "pimentao amarelo": {
+      "produto_id": 14784,
+      "descricao": "Pimentão Amarelo 250g "
+    },
+    "pimentao verde": null,
+    "pimentao vermelho": {
+      "produto_id": 14785,
+      "descricao": "Pimentão Vermelho 250g"
+    },
+    "tomate": {
+      "produto_id": 11048,
+      "descricao": "Tomate 200g "
+    },
+    "tomate italiano": null,
+    "banana nanica": {
+      "produto_id": 14747,
+      "descricao": "Banana Nanica 1kg (aproximadamente 6 Unidades)"
+    },
+    "banana prata": null,
+    "banana terra": {
+      "produto_id": 8516,
+      "descricao": "Banana Terra 1,1kg (aproximadamente 4 Unidades)"
+    },
+    "goiaba": {
+      "produto_id": 11291,
+      "descricao": "Goiaba Vermelha 600g "
+    },
+    "laranja pera": null,
+    "limao": {
+      "produto_id": 10419,
+      "descricao": "Limão 300g (aproximadamente 3 Unidades)"
+    },
+    "maca argentina": {
+      "produto_id": 7980,
+      "descricao": "Maca Argentina 600g (aproximadamente 3 Unidades)"
+    },
+    "maca fuji": {
+      "produto_id": 8515,
+      "descricao": "Maca Fuji 500g (aproximadamente 3 Unidades)"
+    },
+    "maca gala": {
+      "produto_id": 11338,
+      "descricao": "Maçã Gala Nacional 500g (aproximadamente 3 Unidades)"
+    },
+    "maca gransmith": null,
+    "mamao papaya": null,
+    "mamao formosa": null,
+    "manga palmer": {
+      "produto_id": 10418,
+      "descricao": "Manga Palmer 800g (aproximadamente 2 Unidades)"
+    },
+    "manga tommy": null,
+    "maracuja azedo": {
+      "produto_id": 10876,
+      "descricao": "Maracujá Azedo 600g (aproximadamente 2 Unidades)"
+    },
+    "melao amarelo": {
+      "produto_id": 11789,
+      "descricao": "Melão Amarelo 2.5kg"
+    },
+    "pera willians": {
+      "produto_id": 13389,
+      "descricao": "Pera Willians 400g (aproximadamente 2 Unidades)"
+    },
+    "abacate": {
+      "produto_id": 12684,
+      "descricao": "Abacate 700g (aproximadamente 1 Unidade)"
+    }
+  }
+}

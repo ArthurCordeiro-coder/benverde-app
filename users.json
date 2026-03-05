@@ -1,0 +1,10 @@
+[
+  {
+    "username": "Arthur_Cordeiro",
+    "nome": "Arthur Cordeiro Silva",
+    "salt": "ca08e008a2c9d86f76d29e6af8279ecf906bcc01bb7310ece79855840605c322",
+    "senha_hash": "c708dc823457e13553ea9b4574bb38fa0fd3d099f07f47f1b29942470f8381c7",
+    "is_admin": true,
+    "criado_em": "2026-03-05T16:07:17.874953+00:00"
+  }
+]

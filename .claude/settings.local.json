@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:alabarce.net.br)",
+      "Bash(python:*)",
+      "Bash(cd \"C:\\\\Users\\\\pesso\\\\OneDrive\\\\Documentos\\\\benverde\\\\MeuAppGerencia\" && env_app/Scripts/python.exe -c \"\nimport pdfplumber\n\nwith pdfplumber.open\\('benverde 24-02.pdf'\\) as pdf:\n    tabelas = pdf.pages[0].extract_tables\\(\\)\n    # Pegar a tabela grande \\(13 colunas\\)\n    for i, tab in enumerate\\(tabelas\\):\n        if tab and len\\(tab[0]\\) >= 10:\n            print\\(f'=== Tabela {i+1}: {len\\(tab\\)} linhas x {len\\(tab[0]\\)} colunas ==='\\)\n            for j, row in enumerate\\(tab\\):\n                print\\(f'  [{j:02d}] {row}'\\)\n\" 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\pesso\\\\OneDrive\\\\Documentos\\\\benverde\\\\MeuAppGerencia\" && env_app/Scripts/python.exe -c \"\nimport sys\nsys.path.insert\\(0, '.'\\)\nfrom data_processor import extrair_pedido_semar\n\ndf = extrair_pedido_semar\\('benverde 24-02.pdf'\\)\nprint\\(f'Linhas extraídas: {len\\(df\\)}'\\)\nprint\\(\\)\nprint\\(df.to_string\\(index=False\\)\\)\n\" 2>&1)",
+      "Bash(env_appScriptspython.exe:*)"
+    ]
+  }
+}
