@@ -388,6 +388,29 @@ def _render_css_tema() -> None:
         border: 1px solid var(--glass-border) !important;
         border-radius: 20px !important;
     }}
+
+    /* Força cor de texto geral conforme tema do app */
+    .stApp, .stApp p, .stApp span, .stApp label,
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] span {{
+        color: {t['texto']} !important;
+    }}
+
+    /* Fundo dos widgets nativos */
+    [data-testid="stMetric"],
+    [data-testid="stExpander"],
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div {{
+        background: var(--glass-bg) !important;
+        border-color: var(--glass-border) !important;
+    }}
+
+    /* Texto dentro dos widgets nativos */
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricDelta"] {{
+        color: {t['texto_suave']} !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
