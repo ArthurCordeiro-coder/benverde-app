@@ -1151,10 +1151,10 @@ def _render_sidebar() -> None:
         </style>
 
         <div class="botao-link">
-            <a href="http://localhost:8501/Registro_Caixas">📦 Registro das Caixas</a>
+            <a href="https://benverde.streamlit.app/Registro_Caixas">📦 Registro das Caixas</a>
         </div>
         <div class="botao-link">
-            <a href="http://localhost:8501/Registro_Estoque">🍌 Estoque de banana</a>
+            <a href="https://benverde.streamlit.app/Registro_Estoque">🍌 Estoque de banana</a>
         </div>
     """, unsafe_allow_html=True)
 
