@@ -728,17 +728,17 @@ if not st.session_state["autenticado"]:
 # ---------------------------------------------------------------------------
 # Defaults de caminhos
 # ---------------------------------------------------------------------------
-_DEFAULT_CAIXAS_JSON     = r"benverde-app\dados\cache\caixas_lojas.json"
-_DEFAULT_PASTA_PRECOS    = r"benverde-app\dados\precos"
-_DEFAULT_PASTA_PEDIDOS   = r"benverde-app\dados\pedidos_nfe"
-_DEFAULT_PASTA_ENTRADAS  = r"benverde-app\dados\entradas_bananas"
-_DEFAULT_PASTA_SAIDAS    = r"benverde-app\dados\saidas_bananas"
-_DEFAULT_CACHE_PEDIDOS   = r"benverde-app\dados\cache\cache_pedidos.json"
-_DEFAULT_CACHE_ESTOQUE   = r"benverde-app\dados\cache\cache_estoque.json"
-_DEFAULT_METAS_LOCAL     = r"benverde-app\dados\cache\metas_local.json"
-_DEFAULT_ESTOQUE_MANUAL  = r"benverde-app\dados\cache\estoque_manual.json"
-_DEFAULT_PASTA_SEMAR     = r"benverde-app\dados\pedidos_semar"
-_DEFAULT_CACHE_SEMAR     = r"benverde-app\dados\cache\cache_semar.json"
+_DEFAULT_CAIXAS_JSON     = "dados/cache/caixas_lojas.json"
+_DEFAULT_PASTA_PRECOS    = "dados/precos"
+_DEFAULT_PASTA_PEDIDOS   = "dados/pedidos_nfe"
+_DEFAULT_PASTA_ENTRADAS  = "dados/entradas_bananas"
+_DEFAULT_PASTA_SAIDAS    = "dados/saidas_bananas"
+_DEFAULT_CACHE_PEDIDOS   = "dados/cache/cache_pedidos.json"
+_DEFAULT_CACHE_ESTOQUE   = "dados/cache/cache_estoque.json"
+_DEFAULT_METAS_LOCAL     = "dados/cache/metas_local.json"
+_DEFAULT_ESTOQUE_MANUAL  = "dados/cache/estoque_manual.json"
+_DEFAULT_PASTA_SEMAR     = "dados/pedidos_semar"
+_DEFAULT_CACHE_SEMAR     = "dados/cache/cache_semar.json"
 
 
 # ---------------------------------------------------------------------------
