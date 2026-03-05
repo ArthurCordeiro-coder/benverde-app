@@ -2,9 +2,9 @@
 app.py
 Aplicativo Streamlit para gerenciamento da empresa hortifrúti Benverde.
 
-Integra data_processor.py (carregamento de dados) e claude_chat.py
+Integra data_processor.py (carregamento de benverde-app\dados) e claude_chat.py
 (chat com IA) em uma interface com 4 abas:
-    1. Chat IA          — conversa com Grok sobre os dados da empresa.
+    1. Chat IA          — conversa com Grok sobre os benverde-app\dados da empresa.
     2. Metas e Vendas   — progresso de metas, pedidos filtráveis.
     3. Estoque Bananas  — saldo, movimentações, gráfico entradas/saídas.
     4. Preços           — pesquisa de preços nos supermercados por data.
@@ -728,17 +728,17 @@ if not st.session_state["autenticado"]:
 # ---------------------------------------------------------------------------
 # Defaults de caminhos
 # ---------------------------------------------------------------------------
-_DEFAULT_CAIXAS_JSON     = r"dados\cache\caixas_lojas.json"
-_DEFAULT_PASTA_PRECOS    = r"dados\precos"
-_DEFAULT_PASTA_PEDIDOS   = r"dados\pedidos_nfe"
-_DEFAULT_PASTA_ENTRADAS  = r"dados\entradas_bananas"
-_DEFAULT_PASTA_SAIDAS    = r"dados\saidas_bananas"
-_DEFAULT_CACHE_PEDIDOS   = r"dados\cache\cache_pedidos.json"
-_DEFAULT_CACHE_ESTOQUE   = r"dados\cache\cache_estoque.json"
-_DEFAULT_METAS_LOCAL     = r"dados\cache\metas_local.json"
-_DEFAULT_ESTOQUE_MANUAL  = r"dados\cache\estoque_manual.json"
-_DEFAULT_PASTA_SEMAR     = r"dados\pedidos_semar"
-_DEFAULT_CACHE_SEMAR     = r"dados\cache\cache_semar.json"
+_DEFAULT_CAIXAS_JSON     = r"benverde-app\benverde-app\dados\cache\caixas_lojas.json"
+_DEFAULT_PASTA_PRECOS    = r"benverde-app\dados\precos"
+_DEFAULT_PASTA_PEDIDOS   = r"benverde-app\dados\pedidos_nfe"
+_DEFAULT_PASTA_ENTRADAS  = r"benverde-app\dados\entradas_bananas"
+_DEFAULT_PASTA_SAIDAS    = r"benverde-app\dados\saidas_bananas"
+_DEFAULT_CACHE_PEDIDOS   = r"benverde-app\dados\cache\cache_pedidos.json"
+_DEFAULT_CACHE_ESTOQUE   = r"benverde-app\dados\cache\cache_estoque.json"
+_DEFAULT_METAS_LOCAL     = r"benverde-app\dados\cache\metas_local.json"
+_DEFAULT_ESTOQUE_MANUAL  = r"benverde-app\dados\cache\estoque_manual.json"
+_DEFAULT_PASTA_SEMAR     = r"benverde-app\dados\pedidos_semar"
+_DEFAULT_CACHE_SEMAR     = r"benverde-app\dados\cache\cache_semar.json"
 
 
 # ---------------------------------------------------------------------------
@@ -748,22 +748,22 @@ _DEFAULT_CACHE_SEMAR     = r"dados\cache\cache_semar.json"
 def _init_state() -> None:
     """Inicializa todas as chaves do session_state com valores padrão."""
     defaults = {
-        # Dados carregados
+        # benverde-app\dados carregados
         "precos":             {},
         "progresso":          None,
         "pedidos":            None,
         "metas":              None,
         "saldo_estoque":      0.0,
         "historico_estoque":  [],
-        # Metadados
+        # Metabenverde-app\dados
         "ultima_atualizacao": None,
         "n_csvs":             0,
         "n_pdfs":             0,
         "erro_carregamento":  None,
-        "dados_carregados":   False,
+        "benverde-app\dados_carregados":   False,
         # Chat
         "chat_historico":     [],   # exibição (mensagens originais)
-        "chat_historico_api": [],   # API (com contexto de dados injetado)
+        "chat_historico_api": [],   # API (com contexto de benverde-app\dados injetado)
         # Caminhos
         "path_precos":        _DEFAULT_PASTA_PRECOS,
         "path_pasta_pedidos": _DEFAULT_PASTA_PEDIDOS,
@@ -784,11 +784,11 @@ def _init_state() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Carregamento de dados
+# Carregamento de benverde-app\dados
 # ---------------------------------------------------------------------------
 
-def carregar_dados() -> None:
-    """Carrega (ou recarrega) todos os dados.
+def carregar_benverde-app\dados() -> None:
+    """Carrega (ou recarrega) todos os benverde-app\dados.
 
     Usa cache incremental para PDFs: somente arquivos novos são processados.
     """
@@ -893,7 +893,7 @@ def carregar_dados() -> None:
         logger.error("Falha ao carregar caixas: %s", exc)
 
     st.session_state["ultima_atualizacao"] = datetime.now()
-    st.session_state["dados_carregados"]   = len(erros) < 3
+    st.session_state["benverde-app\dados_carregados"]   = len(erros) < 3
     st.session_state["erro_carregamento"]  = "; ".join(erros) if erros else None
 
 
@@ -961,8 +961,8 @@ def _calcular_progresso(df_pedidos: pd.DataFrame, df_metas: pd.DataFrame) -> pd.
     ]
 
 
-def _dados_para_chat() -> dict:
-    """Monta o dicionário de dados para enviar ao chat IA."""
+def _benverde-app\dados_para_chat() -> dict:
+    """Monta o dicionário de benverde-app\dados para enviar ao chat IA."""
     return {
         "precos":            st.session_state["precos"],
         "progresso":         st.session_state["progresso"],
@@ -1158,8 +1158,8 @@ def _render_sidebar() -> None:
         </div>
     """, unsafe_allow_html=True)
 
-        # ---- Status de dados ----
-        st.markdown("### 📊 Status dos Dados")
+        # ---- Status de benverde-app\dados ----
+        st.markdown("### 📊 Status dos benverde-app\dados")
         if st.session_state["ultima_atualizacao"]:
             ts = st.session_state["ultima_atualizacao"].strftime("%d/%m %H:%M")
             st.markdown(
@@ -1177,7 +1177,7 @@ def _render_sidebar() -> None:
             if st.session_state["erro_carregamento"]:
                 st.warning(f"⚠️ {st.session_state['erro_carregamento']}")
         else:
-            st.info("Dados ainda não carregados.")
+            st.info("benverde-app\dados ainda não carregados.")
 
         st.markdown("---")
 
@@ -1295,10 +1295,10 @@ def _sanitizar_resposta_chat(texto: str) -> str:
 def _render_aba_chat() -> None:
     """Renderiza a aba de chat com a IA."""
     st.markdown("### 🤖 Assistente de Gerência")
-    st.caption("Pergunte sobre preços, estoque, metas e vendas. A IA responde com base nos dados atuais.")
+    st.caption("Pergunte sobre preços, estoque, metas e vendas. A IA responde com base nos benverde-app\dados atuais.")
 
-    if not st.session_state["dados_carregados"]:
-        st.warning("⚠️ Dados não carregados. Clique em **Atualizar Dados** para começar.")
+    if not st.session_state["benverde-app\dados_carregados"]:
+        st.warning("⚠️ benverde-app\dados não carregados. Clique em **Atualizar benverde-app\dados** para começar.")
         return
 
     # Exibe histórico de mensagens
@@ -1347,14 +1347,14 @@ def _processar_mensagem_chat(mensagem: str) -> None:
     Args:
         mensagem: Texto digitado pelo usuário.
     """
-    dados = _dados_para_chat()
+    benverde-app\dados = _benverde-app\dados_para_chat()
 
-    # Histórico da API: contém o contexto de dados injetado (não exibido ao usuário)
+    # Histórico da API: contém o contexto de benverde-app\dados injetado (não exibido ao usuário)
     hist_api = st.session_state.get("chat_historico_api", [])
 
     with st.spinner("🤔 Consultando IA..."):
         try:
-            resposta, hist_api_novo = chat_com_grok_historico(mensagem, dados, hist_api)
+            resposta, hist_api_novo = chat_com_grok_historico(mensagem, benverde-app\dados, hist_api)
         except Exception as exc:
             logger.error("Erro inesperado no chat: %s", exc)
             resposta = "Erro inesperado ao consultar a IA. Tente novamente."
@@ -1499,9 +1499,9 @@ def _df_de_upload(arquivo) -> pd.DataFrame:
     nome = arquivo.name.lower()
     dfs  = []
 
-    def _pdf_bytes_para_df(dados: bytes, nome_arq: str) -> pd.DataFrame:
+    def _pdf_bytes_para_df(benverde-app\dados: bytes, nome_arq: str) -> pd.DataFrame:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-            tmp.write(dados)
+            tmp.write(benverde-app\dados)
             tmp_path = tmp.name
         try:
             _, dt, loja, produtos = _worker_pedido(tmp_path)
@@ -1528,11 +1528,11 @@ def _df_de_upload(arquivo) -> pd.DataFrame:
         with zipfile.ZipFile(io.BytesIO(arquivo.read())) as zf:
             for membro in zf.namelist():
                 m = membro.lower()
-                dados = zf.read(membro)
+                benverde-app\dados = zf.read(membro)
                 if m.endswith(".pdf"):
-                    dfs.append(_pdf_bytes_para_df(dados, membro))
+                    dfs.append(_pdf_bytes_para_df(benverde-app\dados, membro))
                 elif m.endswith(".csv"):
-                    dfs.append(_ler_csv(io.BytesIO(dados)))
+                    dfs.append(_ler_csv(io.BytesIO(benverde-app\dados)))
 
     dfs = [d for d in dfs if not d.empty]
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
@@ -1548,7 +1548,7 @@ def _render_form_metas() -> None:
     # SEÇÃO A — Upload de imagem (OCR via IA)
     # ================================================================
     st.markdown("##### 🖼️ Importar metas (imagem ou planilha)")
-    st.caption("Faça upload da tabela de metas em PNG, JPEG ou XLSX. A IA extrai e normaliza os dados automaticamente.")
+    st.caption("Faça upload da tabela de metas em PNG, JPEG ou XLSX. A IA extrai e normaliza os benverde-app\dados automaticamente.")
 
     arquivo_img = st.file_uploader(
         "Selecionar arquivo",
@@ -1621,7 +1621,7 @@ def _render_form_metas() -> None:
                     )
 
                     # Mostra prévia do que foi extraído
-                    with st.expander("Ver dados extraídos", expanded=True):
+                    with st.expander("Ver benverde-app\dados extraídos", expanded=True):
                         st.dataframe(
                             pd.DataFrame(metas_extraidas),
                             hide_index=True,
@@ -1795,7 +1795,7 @@ def _render_aba_metas() -> None:
     st.markdown("---")
 
     if df_prog is None or df_prog.empty:
-        st.warning("⚠️ Sem dados de progresso. Cadastre metas acima e clique em **Atualizar Dados**.")
+        st.warning("⚠️ Sem benverde-app\dados de progresso. Cadastre metas acima e clique em **Atualizar benverde-app\dados**.")
         return
 
     # ---- Gerenciar Metas (expander) ----
@@ -1969,7 +1969,7 @@ def _render_aba_metas() -> None:
         )
         st.caption(f"Exibindo {len(df_ped_exibir)} de {len(df_ped)} pedidos.")
     else:
-        st.info("Dados de pedidos não disponíveis.")
+        st.info("benverde-app\dados de pedidos não disponíveis.")
 
     # ---- Gráfico: vendas por produto (top 10) ----
     if df_ped is not None and not df_ped.empty:
@@ -2034,7 +2034,7 @@ def _render_aba_estoque() -> None:
     c4.metric("📄 Movimentações", n_movimentacoes)
 
     if saldo <= 0:
-        st.error("🚨 **Atenção: estoque zerado ou negativo!** Verifique os dados.")
+        st.error("🚨 **Atenção: estoque zerado ou negativo!** Verifique os benverde-app\dados.")
     elif saldo < 50:
         st.warning(f"⚠️ Estoque baixo: apenas **{saldo:.1f} kg**. Considere reposição.")
     else:
@@ -2043,7 +2043,7 @@ def _render_aba_estoque() -> None:
     st.markdown("---")
 
     if not historico:
-        st.info("Nenhuma movimentação encontrada. Verifique as pastas de PDFs e clique em **Atualizar Dados**.")
+        st.info("Nenhuma movimentação encontrada. Verifique as pastas de PDFs e clique em **Atualizar benverde-app\dados**.")
         return
 
     # ---- Gráfico de movimentações ----
@@ -2053,7 +2053,7 @@ def _render_aba_estoque() -> None:
     df_hist["data_fmt"] = pd.to_datetime(df_hist["data"], errors="coerce")
     df_hist = df_hist.dropna(subset=["data_fmt"])
 
-    # --- Limpeza de dados sujos vindos do PDF ---
+    # --- Limpeza de benverde-app\dados sujos vindos do PDF ---
     # Produto: extrai apenas o primeiro nome de banana válido da string concatenada
     # Ex.: "BANANA NANICA BANANA PRATA" → "BANANA NANICA"
     _VARIEDADES = ["BANANA DA TERRA", "BANANA MACA", "BANANA MAÇÃ",
@@ -2232,7 +2232,7 @@ def _render_aba_precos() -> None:
     precos = st.session_state["precos"]
 
     if not precos:
-        st.warning("⚠️ Nenhuma pesquisa de preços encontrada. Verifique a pasta de CSVs e clique em **Atualizar Dados**.")
+        st.warning("⚠️ Nenhuma pesquisa de preços encontrada. Verifique a pasta de CSVs e clique em **Atualizar benverde-app\dados**.")
         return
 
     datas_disponiveis = list(precos.keys())
@@ -2302,7 +2302,7 @@ def _render_aba_precos() -> None:
             status_col = c.replace("Preço", "Status").replace("preço", "Status")
             if status_col not in df_preco.columns:
                 df_preco[status_col] = df_preco[c].apply(
-                    lambda v: "OK" if pd.notna(v) and v > 0 else "Sem dados"
+                    lambda v: "OK" if pd.notna(v) and v > 0 else "Sem benverde-app\dados"
                 )
 
         st.info(
@@ -2460,11 +2460,11 @@ def _tabela_caixas_fig(df_exibir: pd.DataFrame) -> "go.Figure":
     """Gera figura Plotly da tabela de caixas para exportação."""
     colunas_header = ["Data", "Loja", "Nº Loja",
                       "Benverde", "CCJ", "Bananas", "Total", "Entregue?"]
-    colunas_dados  = ["data", "loja", "n_loja",
+    colunas_benverde-app\dados  = ["data", "loja", "n_loja",
                       "caixas_benverde", "caixas_ccj", "caixas_bananas", "total", "entregue"]
 
     valores = []
-    for col in colunas_dados:
+    for col in colunas_benverde-app\dados:
         if col in df_exibir.columns:
             if col == "data":
                 vals = df_exibir[col].apply(
@@ -2528,7 +2528,7 @@ def _render_aba_caixas() -> None:
 
     df = st.session_state.get("caixas_lojas")
     if df is None or (hasattr(df, "empty") and df.empty):
-        st.warning("⚠️ Nenhum registro encontrado. Aguarde os registros das lojas ou clique em **Atualizar Dados**.")
+        st.warning("⚠️ Nenhum registro encontrado. Aguarde os registros das lojas ou clique em **Atualizar benverde-app\dados**.")
         return
 
     # ---- BLOCO 1 — Métricas ----
@@ -2675,14 +2675,14 @@ def main() -> None:
         <div style="font-size:2.4rem;line-height:1">🌿</div>
         <div>
             <h1>Mita</h1>
-            <p>Oie! eu sou a Mita, sua gerente de dados da Benverde! como posso te ajudar hoje?</p>
+            <p>Oie! eu sou a Mita, sua gerente de benverde-app\dados da Benverde! como posso te ajudar hoje?</p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     # ---- Botão global Atualizar ----
     col_btn, col_status_inline = st.columns([2, 6])
-    atualizar = col_btn.button("🔄 Atualizar Dados", type="primary", width="stretch")
+    atualizar = col_btn.button("🔄 Atualizar benverde-app\dados", type="primary", width="stretch")
     if st.session_state["ultima_atualizacao"]:
         col_status_inline.caption(
             f"Última atualização: **{st.session_state['ultima_atualizacao'].strftime('%d/%m/%Y às %H:%M:%S')}**"
@@ -2690,21 +2690,21 @@ def main() -> None:
                if st.session_state["erro_carregamento"] else "")
         )
     else:
-        col_status_inline.caption("Dados ainda não carregados.")
+        col_status_inline.caption("benverde-app\dados ainda não carregados.")
 
     if atualizar:
-        with st.spinner("⏳ Carregando dados... aguarde."):
-            carregar_dados()
-        if st.session_state["dados_carregados"]:
-            st.success("✅ Dados atualizados com sucesso!")
+        with st.spinner("⏳ Carregando benverde-app\dados... aguarde."):
+            carregar_benverde-app\dados()
+        if st.session_state["benverde-app\dados_carregados"]:
+            st.success("✅ benverde-app\dados atualizados com sucesso!")
         else:
-            st.error("❌ Falha ao carregar dados. Verifique os caminhos na sidebar.")
+            st.error("❌ Falha ao carregar benverde-app\dados. Verifique os caminhos na sidebar.")
         st.rerun()
 
     # Carrega automaticamente na primeira visita
-    if not st.session_state["dados_carregados"] and st.session_state["ultima_atualizacao"] is None:
-        with st.spinner("⏳ Carregando dados pela primeira vez..."):
-            carregar_dados()
+    if not st.session_state["benverde-app\dados_carregados"] and st.session_state["ultima_atualizacao"] is None:
+        with st.spinner("⏳ Carregando benverde-app\dados pela primeira vez..."):
+            carregar_benverde-app\dados()
         st.rerun()
 
     st.markdown("<div style='margin-top:0.5rem'></div>", unsafe_allow_html=True)
