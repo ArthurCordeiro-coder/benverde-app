@@ -728,17 +728,17 @@ if not st.session_state["autenticado"]:
 # ---------------------------------------------------------------------------
 # Defaults de caminhos
 # ---------------------------------------------------------------------------
-_DEFAULT_CAIXAS_JSON     = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\caixas_lojas.json"
-_DEFAULT_PASTA_PRECOS    = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\precos"
-_DEFAULT_PASTA_PEDIDOS   = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\pedidos_nfe"
-_DEFAULT_PASTA_ENTRADAS  = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\entradas_bananas"
-_DEFAULT_PASTA_SAIDAS    = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\saidas_bananas"
-_DEFAULT_CACHE_PEDIDOS   = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\cache_pedidos.json"
-_DEFAULT_CACHE_ESTOQUE   = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\cache_estoque.json"
-_DEFAULT_METAS_LOCAL     = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\metas_local.json"
-_DEFAULT_ESTOQUE_MANUAL  = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\estoque_manual.json"
-_DEFAULT_PASTA_SEMAR     = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\pedidos_semar"
-_DEFAULT_CACHE_SEMAR     = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\cache_semar.json"
+_DEFAULT_CAIXAS_JSON     = r"dados\cache\caixas_lojas.json"
+_DEFAULT_PASTA_PRECOS    = r"dados\precos"
+_DEFAULT_PASTA_PEDIDOS   = r"dados\pedidos_nfe"
+_DEFAULT_PASTA_ENTRADAS  = r"dados\entradas_bananas"
+_DEFAULT_PASTA_SAIDAS    = r"dados\saidas_bananas"
+_DEFAULT_CACHE_PEDIDOS   = r"dados\cache\cache_pedidos.json"
+_DEFAULT_CACHE_ESTOQUE   = r"dados\cache\cache_estoque.json"
+_DEFAULT_METAS_LOCAL     = r"dados\cache\metas_local.json"
+_DEFAULT_ESTOQUE_MANUAL  = r"dados\cache\estoque_manual.json"
+_DEFAULT_PASTA_SEMAR     = r"dados\pedidos_semar"
+_DEFAULT_CACHE_SEMAR     = r"dados\cache\cache_semar.json"
 
 
 # ---------------------------------------------------------------------------
@@ -1183,7 +1183,7 @@ def _render_sidebar() -> None:
 
         # ---- Buscar preços ----
         # Modo automático: usa a página "💰 Busca de Preços" para escolha interativa.
-        _SCRIPT_PRECOS = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\verificação dos preços dos produtos\buscar_precos.py"
+        _SCRIPT_PRECOS = r"verificação dos preços dos produtos\buscar_precos.py"
 
         st.page_link("pages/4_Busca_Precos.py", label="💰 Busca de Preços (interativa)", icon="🛒", use_container_width=True)
         st.caption("⚡ Ou atualize automaticamente sem seleção manual:")
