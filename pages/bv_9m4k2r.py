@@ -411,6 +411,13 @@ def _render_css_tema() -> None:
     [data-testid="stMetricDelta"] {{
         color: {t['texto_suave']} !important;
     }}
+
+    /* Botões da sidebar — texto sempre branco
+       independente do tema (fundo é sempre escuro) */
+    [data-testid="stSidebar"] .stButton > button,
+    [data-testid="stSidebar"] .stButton > button * {{
+        color: white !important;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
