@@ -1155,7 +1155,7 @@ def _render_sidebar() -> None:
 
         # ---- Buscar preços ----
         # Modo automático: usa a página "💰 Busca de Preços" para escolha interativa.
-        _SCRIPT_PRECOS = r"verificação dos preços dos produtos\buscar_precos.py"
+        _SCRIPT_PRECOS = "verificação dos preços dos produtos\buscar_precos.py"
 
         st.page_link("pages/4_Busca_Precos.py", label="💰 Busca de Preços (interativa)", icon="🛒", use_container_width=True)
         st.caption("⚡ Ou atualize automaticamente sem seleção manual:")
@@ -1242,7 +1242,7 @@ def _render_sidebar() -> None:
                             st.rerun()
 
         st.markdown("---")
-        st.caption("Mita IA · v1.3")
+        st.caption("Mita IA · v1.5")
 
 
 # ---------------------------------------------------------------------------
@@ -1253,14 +1253,15 @@ def _sanitizar_resposta_chat(texto: str) -> str:
     """Corrige conflitos de formatação LaTeX que o Streamlit interpreta errado."""
     import re
 
-    # Corrige "R4,89" → "R$ 4,89" (Grok às vezes omite o cifrão)
+    # Corrige "R4,89" → "R$ 4,89" (IA às vezes omite o cifrão)
     texto = re.sub(r'\bR(\d)', r'R$ \1', texto)
-
-    # Escapa cifrões soltos que viram LaTeX inline
-    texto = re.sub(r'(?<!\w)\$(?!\s)(?!\$)', r'\\$', texto)
 
     # Remove caracteres invisíveis
     texto = texto.replace('\u200b', '').replace('\u00a0', ' ')
+
+    # Escapa TODOS os cifrões que não foram escapados ainda
+    # Substitui $ que não seja precedido por \ 
+    texto = re.sub(r'(?<!\\)\$', r'\\$', texto)
 
     return texto
 
