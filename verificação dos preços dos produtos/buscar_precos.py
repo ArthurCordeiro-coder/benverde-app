@@ -41,7 +41,7 @@ if hasattr(sys.stderr, "reconfigure"):
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 os.environ["PYTHONLEGACYWINDOWSSTDIO"] = "0"
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -216,74 +216,77 @@ def capturar_dados_loja(loja):
 
     for tentativa in range(1, _MAX_TENTATIVAS + 1):
         print(f"\n🌐 Capturando token: {loja['nome']} (tentativa {tentativa}/{_MAX_TENTATIVAS})")
-
-        pw = None
-        browser = None
+        resultado = {
+            "token": None, "sessao_id": None, "session": None,
+            "org_id": None, "filial_id": None, "cd_id": None,
+        }
         try:
             _garantir_playwright()
-            pw = sync_playwright().start()
-            browser = pw.chromium.launch(headless=True, args=_ARGS_CHROME)
-            page = browser.new_page()
-            page.set_default_timeout(30_000)
-
-            resultado = {
-                "token": None, "sessao_id": None, "session": None,
-                "org_id": None, "filial_id": None, "cd_id": None,
-            }
-
-            def on_request(request):
-                url = request.url
-                if "vipcommerce.com.br" not in url:
-                    return
-                headers = request.headers
-                auth = headers.get("authorization", "")
-                sid  = headers.get("sessao-id", "")
-
-                if auth.lower().startswith("bearer ") and sid:
-                    resultado["token"]     = auth[7:].strip()
-                    resultado["sessao_id"] = sid.strip()
-
-                if "session=" in url and not resultado["session"]:
-                    resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
-
-                if "/org/" in url and "/filial/" in url and "/centro_distribuicao/" in url:
-                    partes = url.split("/")
-                    try:
-                        resultado["org_id"]    = partes[partes.index("org") + 1]
-                        resultado["filial_id"] = partes[partes.index("filial") + 1]
-                        resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
-                    except (ValueError, IndexError):
-                        pass
-
-            page.on("request", on_request)
-            page.goto(loja["url"], wait_until="domcontentloaded")
-            page.wait_for_timeout(5000)
-
-            try:
-                campo = page.wait_for_selector(
-                    "input[type='search'], input[type='text'], "
-                    "input[placeholder*='usca'], input[placeholder*='esquisa']",
-                    timeout=10_000,
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
                 )
-                campo.click()
-                campo.fill("arroz")
-                page.wait_for_timeout(4000)
-            except Exception:
-                pass
+                context = browser.new_context()
+                page = context.new_page()
 
-            if resultado["token"] and not resultado["session"]:
+                # Intercepta requisições de rede
+                def interceptar(request):
+                    if "vipcommerce.com.br" not in request.url:
+                        return
+                    headers = request.headers
+                    auth = headers.get("authorization", "")
+                    sid  = headers.get("sessao-id", "")
+                    url  = request.url
+
+                    if auth.startswith("Bearer ") and sid and not resultado["token"]:
+                        resultado["token"]     = auth.replace("Bearer ", "").strip()
+                        resultado["sessao_id"] = sid.strip()
+
+                    if "session=" in url and not resultado["session"]:
+                        resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
+
+                    if "/org/" in url and "/centro_distribuicao/" in url and not resultado["org_id"]:
+                        partes = url.split("/")
+                        try:
+                            resultado["org_id"]    = partes[partes.index("org") + 1]
+                            resultado["filial_id"] = partes[partes.index("filial") + 1]
+                            resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
+                        except (ValueError, IndexError):
+                            pass
+
+                page.on("request", interceptar)
+
+                page.goto(loja["url"], timeout=30000)
+                page.wait_for_timeout(5000)
+
+                # Tenta digitar no campo de busca
                 try:
-                    resultado["session"] = page.evaluate("localStorage.getItem('session')")
+                    campo = page.locator(
+                        "input[type='search'], input[type='text'], "
+                        "input[placeholder*='usca'], input[placeholder*='esquisa']"
+                    ).first
+                    campo.click()
+                    campo.type("arroz")
+                    page.wait_for_timeout(4000)
                 except Exception:
                     pass
 
-            # Verifica se captura foi bem-sucedida
-            if not resultado["token"]:
-                raise RuntimeError("token não encontrado nos logs de rede")
-            if not resultado["org_id"]:
-                raise RuntimeError("org_id/cd_id não encontrado na URL da API")
+                # Tenta pegar session do localStorage como fallback
+                if resultado["token"] and not resultado["session"]:
+                    try:
+                        resultado["session"] = page.evaluate("localStorage.getItem('session')")
+                    except Exception:
+                        pass
 
-            print(f"✅ {loja['nome']}: org={resultado['org_id']} | filial={resultado['filial_id']} | cd={resultado['cd_id']}")
+                browser.close()
+
+            if not resultado["token"]:
+                raise RuntimeError("token não encontrado nas requisições")
+            if not resultado["org_id"]:
+                raise RuntimeError("org_id não encontrado na URL")
+
+            print(f"✅ {loja['nome']}: org={resultado['org_id']} | cd={resultado['cd_id']}")
             return resultado
 
         except Exception as exc:
@@ -291,19 +294,8 @@ def capturar_dados_loja(loja):
             if tentativa < _MAX_TENTATIVAS:
                 print(f"  🔄 Aguardando 5s antes de tentar novamente...")
                 time.sleep(5)
-        finally:
-            if browser is not None:
-                try:
-                    browser.close()
-                except Exception:
-                    pass
-            if pw is not None:
-                try:
-                    pw.stop()
-                except Exception:
-                    pass
 
-    print(f"❌ {loja['nome']}: todas as tentativas falharam. Loja será ignorada.")
+    print(f"❌ {loja['nome']}: todas as tentativas falharam.")
     return _RESULTADO_VAZIO
 
 
@@ -318,14 +310,14 @@ def _dispensar_popup_loja_alabarce(page):
     Não levanta exceção se o popup não estiver presente.
     """
     try:
-        modal = page.query_selector("#stock-picker")
-        if not modal or not modal.is_visible():
+        modal = page.locator("#stock-picker")
+        if modal.count() == 0 or not modal.is_visible():
             return
-        btn = modal.query_selector("a[href*='current_stock'][href*='withdrawal']")
-        if btn:
-            btn.click()
+        btn = modal.locator("a[href*='current_stock'][href*='withdrawal']")
+        if btn.count() > 0:
+            btn.first.click()
             try:
-                page.wait_for_selector("#stock-picker", state="hidden", timeout=5000)
+                page.locator("#stock-picker").wait_for(state="hidden", timeout=5000)
             except Exception:
                 pass
     except Exception:
@@ -367,21 +359,21 @@ def buscar_produto_alabarce(termo, page):
 
         # Aguarda os cards de produto aparecerem (máx 8s)
         try:
-            page.wait_for_selector(".product-cards .product", timeout=8000)
+            page.locator(".product-cards .product").first.wait_for(timeout=8000)
             page.wait_for_timeout(500)
         except Exception:
             return []  # sem resultados para este termo
 
-        cards = page.query_selector_all(".product-cards .product")
+        cards = page.locator(".product-cards .product").all()
         produtos = []
 
         for card in cards:
             # Nome
             try:
-                el = card.query_selector("h5.product-title")
-                if not el:
+                el_nome = card.locator("h5.product-title")
+                if el_nome.count() == 0:
                     continue
-                nome = el.inner_text().strip().upper()
+                nome = el_nome.first.inner_text().strip().upper()
             except Exception:
                 continue
 
@@ -391,9 +383,9 @@ def buscar_produto_alabarce(termo, page):
             # Preço — pega o preço atual (promoção ou normal)
             preco_num = None
             try:
-                el_preco = card.query_selector(".price-amount span")
-                if el_preco:
-                    preco_str = el_preco.inner_text()
+                el_preco = card.locator(".price-amount span")
+                if el_preco.count() > 0:
+                    preco_str = el_preco.first.inner_text()
                     preco_clean = (
                         preco_str
                         .replace("R$", "").replace("R$ ", "")
