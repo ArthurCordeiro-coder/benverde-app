@@ -234,44 +234,6 @@ def capturar_dados_loja(loja):
                 )
                 page = context.new_page()
 
-                # CDP session — captura requisições exatamente como o Selenium
-                # performance log fazia com Network.requestWillBeSent
-                client = context.new_cdp_session(page)
-                client.send("Network.enable")
-
-                urls_capturadas = []  # debug
-
-                def on_cdp_request(params):
-                    req = params.get("request", {})
-                    url = req.get("url", "")
-                    headers = req.get("headers", {})
-
-                    urls_capturadas.append(url[:100])  # debug
-
-                    if "vipcommerce.com.br" not in url:
-                        return
-
-                    auth = headers.get("Authorization") or headers.get("authorization", "")
-                    sid  = headers.get("sessao-id") or headers.get("Sessao-Id", "")
-
-                    if auth.startswith("Bearer ") and sid and not resultado["token"]:
-                        resultado["token"]     = auth.replace("Bearer ", "").strip()
-                        resultado["sessao_id"] = sid.strip()
-
-                    if "session=" in url and not resultado["session"]:
-                        resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
-
-                    if "/org/" in url and "/centro_distribuicao/" in url and not resultado["org_id"]:
-                        partes = url.split("/")
-                        try:
-                            resultado["org_id"]    = partes[partes.index("org") + 1]
-                            resultado["filial_id"] = partes[partes.index("filial") + 1]
-                            resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
-                        except (ValueError, IndexError):
-                            pass
-
-                client.on("Network.requestWillBeSent", on_cdp_request)
-
                 def interceptar(request):
                     if "vipcommerce" not in request.url:
                         return
@@ -333,9 +295,7 @@ def capturar_dados_loja(loja):
             return resultado
 
         except Exception as exc:
-            import traceback
             print(f"  ⚠️  {loja['nome']} tentativa {tentativa} falhou: {exc}")
-            print(f"  🔍 Traceback:\n{traceback.format_exc()}")
             if tentativa < _MAX_TENTATIVAS:
                 print(f"  🔄 Aguardando 5s antes de tentar novamente...")
                 time.sleep(5)
