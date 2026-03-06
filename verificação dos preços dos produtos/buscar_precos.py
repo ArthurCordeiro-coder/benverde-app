@@ -272,11 +272,41 @@ def capturar_dados_loja(loja):
 
                 client.on("Network.requestWillBeSent", on_cdp_request)
 
-                # Intercepta também via page.on("request") para comparar cobertura
+                # Intercepta via page.on("request") — mostra headers reais das reqs VipCommerce
                 urls_page_on = []
 
                 def interceptar(request):
                     urls_page_on.append(request.url)
+
+                    if "vipcommerce" in request.url:
+                        vip_count = sum(1 for u in urls_page_on if "vipcommerce" in u)
+                        if vip_count == 1:
+                            print(f"  🔍 Headers da 1ª req VipCommerce ({loja['nome']}):")
+                            for k, v in request.headers.items():
+                                valor = v[:30] + "..." if len(v) > 30 else v
+                                print(f"      {k}: {valor}")
+
+                        auth = (
+                            request.headers.get("authorization") or
+                            request.headers.get("Authorization") or
+                            request.headers.get("x-authorization") or
+                            request.headers.get("x-auth-token") or
+                            request.headers.get("token") or
+                            ""
+                        )
+                        sid = (
+                            request.headers.get("sessao-id") or
+                            request.headers.get("Sessao-Id") or
+                            request.headers.get("sessionid") or
+                            request.headers.get("x-session-id") or
+                            ""
+                        )
+
+                        if auth and not resultado["token"]:
+                            resultado["token"] = auth.replace("Bearer ", "").strip()
+                            print(f"  ✅ Token encontrado via page.on: {auth[:20]}...")
+                        if sid and not resultado["sessao_id"]:
+                            resultado["sessao_id"] = sid.strip()
 
                 page.on("request", interceptar)
 
