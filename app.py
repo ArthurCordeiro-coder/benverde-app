@@ -21,4 +21,4 @@ st.markdown(
 )
 
 if __name__ != "__mp_main__":
-    st.switch_page("pages/3_Registro_Caixas.py")
+    st.switch_page("pages/bv_9m4k2r.py")
