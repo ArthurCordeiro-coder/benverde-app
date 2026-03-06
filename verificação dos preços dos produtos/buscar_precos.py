@@ -272,59 +272,36 @@ def capturar_dados_loja(loja):
 
                 client.on("Network.requestWillBeSent", on_cdp_request)
 
-                # Intercepta via page.on("request") — mostra headers reais das reqs VipCommerce
-                urls_page_on = []
-
                 def interceptar(request):
-                    urls_page_on.append(request.url)
+                    if "vipcommerce" not in request.url:
+                        return
 
-                    if "vipcommerce" in request.url:
-                        vip_count = sum(1 for u in urls_page_on if "vipcommerce" in u)
-                        if vip_count == 1:
-                            print(f"  🔍 Headers da 1ª req VipCommerce ({loja['nome']}):")
-                            for k, v in request.headers.items():
-                                valor = v[:30] + "..." if len(v) > 30 else v
-                                print(f"      {k}: {valor}")
+                    headers = request.headers
+                    auth = headers.get("authorization", "") or headers.get("Authorization", "")
+                    sid  = headers.get("sessao-id", "") or headers.get("Sessao-Id", "")
+                    url  = request.url
 
-                        auth = (
-                            request.headers.get("authorization") or
-                            request.headers.get("Authorization") or
-                            request.headers.get("x-authorization") or
-                            request.headers.get("x-auth-token") or
-                            request.headers.get("token") or
-                            ""
-                        )
-                        sid = (
-                            request.headers.get("sessao-id") or
-                            request.headers.get("Sessao-Id") or
-                            request.headers.get("sessionid") or
-                            request.headers.get("x-session-id") or
-                            ""
-                        )
+                    token_valor = auth.replace("Bearer", "").replace("bearer", "").strip()
+                    if token_valor and len(token_valor) > 10 and not resultado["token"]:
+                        resultado["token"]     = token_valor
+                        resultado["sessao_id"] = sid.strip()
 
-                        if auth and not resultado["token"]:
-                            resultado["token"] = auth.replace("Bearer ", "").strip()
-                            print(f"  ✅ Token encontrado via page.on: {auth[:20]}...")
-                        if sid and not resultado["sessao_id"]:
-                            resultado["sessao_id"] = sid.strip()
+                    if "session=" in url and not resultado["session"]:
+                        resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
+
+                    if "/org/" in url and "/centro_distribuicao/" in url and not resultado["org_id"]:
+                        partes = url.split("/")
+                        try:
+                            resultado["org_id"]    = partes[partes.index("org") + 1]
+                            resultado["filial_id"] = partes[partes.index("filial") + 1]
+                            resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
+                        except (ValueError, IndexError):
+                            pass
 
                 page.on("request", interceptar)
 
-                # Intercepta respostas vipcommerce
-                respostas_vip = []
-
-                def interceptar_resposta(response):
-                    if "vipcommerce" in response.url:
-                        respostas_vip.append(response.url)
-
-                page.on("response", interceptar_resposta)
-
                 page.goto(loja["url"], wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(5000)
-
-                print(f"  🔍 Título da página: {page.title()}")
-                print(f"  🔍 URL final: {page.url}")
-                print(f"  🔍 Conteúdo (primeiros 500 chars): {page.content()[:500]}")
 
                 # Tenta digitar no campo de busca
                 try:
@@ -337,13 +314,6 @@ def capturar_dados_loja(loja):
                     page.wait_for_timeout(4000)
                 except Exception:
                     pass
-
-                # Debug completo de URLs
-                print(f"  🔍 {loja['nome']}: {len(urls_capturadas)} URLs via CDP, {len(urls_page_on)} via page.on")
-                print(f"  🔍 Primeiras URLs (CDP): {urls_capturadas[:5]}")
-                vip_urls = [u for u in urls_capturadas if "vipcommerce" in u]
-                print(f"  🔍 URLs VipCommerce (CDP): {vip_urls[:5]}")
-                print(f"  🔍 Respostas VipCommerce: {respostas_vip[:5]}")
 
                 # Tenta pegar session do localStorage como fallback
                 if resultado["token"] and not resultado["session"]:
@@ -848,18 +818,15 @@ def main():
 
     dados_lojas = {}
     lojas_vc = [l for l in LOJAS if l.get("tipo", "vipcommerce") == "vipcommerce"]
-    with ThreadPoolExecutor(max_workers=min(MAX_WORKERS_TOKENS, len(lojas_vc) or 1)) as ex:
-        futuros = {ex.submit(capturar_dados_loja, loja): loja for loja in lojas_vc}
-        for fut in as_completed(futuros):
-            loja = futuros[fut]
-            try:
-                resultado = fut.result()
-                if resultado.get("token"):
-                    dados_lojas[loja["nome"]] = resultado
-                else:
-                    print(f"⚠️  {loja['nome']}: token não capturado — loja será ignorada nesta execução.")
-            except Exception as exc:
-                print(f"⚠️  {loja['nome']}: erro inesperado ({exc}) — loja será ignorada.")
+    for loja in lojas_vc:
+        try:
+            resultado = capturar_dados_loja(loja)
+            if resultado.get("token"):
+                dados_lojas[loja["nome"]] = resultado
+            else:
+                print(f"⚠️  {loja['nome']}: token não capturado — loja será ignorada.")
+        except Exception as exc:
+            print(f"⚠️  {loja['nome']}: erro inesperado ({exc}) — loja será ignorada.")
 
     if not dados_lojas:
         print("❌ Nenhuma loja respondeu. Verifique a conexão e tente novamente.")
