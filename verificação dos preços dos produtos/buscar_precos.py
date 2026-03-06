@@ -27,6 +27,7 @@ import threading
 import time
 import unicodedata
 import shutil
+import subprocess
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -36,58 +37,76 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-# Força UTF-8 nos subprocessos filhos (ChromeDriver) — evita cp1252 no Windows
+# Força UTF-8 nos subprocessos filhos — evita cp1252 no Windows
 os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 os.environ["PYTHONLEGACYWINDOWSSTDIO"] = "0"
 
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as _ServiceBase
-import subprocess as _subprocess
-
-class Service(_ServiceBase):
-    """Service com stdout/stderr forçados para DEVNULL.
-    Evita UnicodeDecodeError (cp1252) no Windows com Python 3.13."""
-    def _start_process(self, path):
-        self._log_file = _subprocess.DEVNULL
-        super()._start_process(path)
-    def start(self):
-        # Intercepta o Popen para forçar DEVNULL antes do _readerthread ser criado
-        import subprocess
-        _orig = subprocess.Popen
-        def _popen_utf8(*a, **kw):
-            kw.setdefault('stdout', subprocess.DEVNULL)
-            kw.setdefault('stderr', subprocess.DEVNULL)
-            return _orig(*a, **kw)
-        subprocess.Popen = _popen_utf8
-        try:
-            super().start()
-        finally:
-            subprocess.Popen = _orig
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from playwright.sync_api import sync_playwright
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
 
+# =============================================================
+# 🎭  PLAYWRIGHT — instalação única por processo
+# =============================================================
 
-def _criar_opcoes_chrome() -> webdriver.ChromeOptions:
-    """Opções Chrome compartilhadas para todas as instâncias."""
-    options = webdriver.ChromeOptions()
-    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1280,800")
-    return options
+_playwright_ready = False
+_playwright_install_lock = threading.Lock()
+
+
+def _garantir_playwright():
+    """Instala o browser Chromium do Playwright uma vez por processo."""
+    global _playwright_ready
+    if _playwright_ready:
+        return
+    with _playwright_install_lock:
+        if _playwright_ready:
+            return
+        try:
+            subprocess.run(
+                ["playwright", "install", "chromium"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=300,
+            )
+        except Exception as e:
+            print(f"⚠️  playwright install chromium: {e}")
+        _playwright_ready = True
+
+
+_ARGS_CHROME = [
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--window-size=1280,800",
+]
+
+
+class _PlaywrightContext:
+    """Agrupa playwright, browser e page para facilitar o ciclo de vida."""
+
+    def __init__(self):
+        _garantir_playwright()
+        self._pw = sync_playwright().start()
+        self.browser = self._pw.chromium.launch(headless=True, args=_ARGS_CHROME)
+        self.page = self.browser.new_page()
+        self.page.set_default_timeout(30_000)
+
+    def quit(self):
+        try:
+            self.browser.close()
+        except Exception:
+            pass
+        try:
+            self._pw.stop()
+        except Exception:
+            pass
+
 
 # =============================================================
 # ⚙️  CONFIGURAÇÃO DE LOJAS
 #
 # tipo "vipcommerce" → usa API VipCommerce (token automático)
-# tipo "alabarce"    → usa Selenium + scraping HTML
+# tipo "alabarce"    → usa Playwright + scraping HTML
 # =============================================================
 
 LOJAS = [
@@ -173,13 +192,13 @@ def _migrar_escolhas_se_necessario(dados: dict) -> tuple:
     return novo, True
 
 # =============================================================
-# 🌐  CAPTURA AUTOMÁTICA DE TOKEN E PARÂMETROS VIA SELENIUM
+# 🌐  CAPTURA AUTOMÁTICA DE TOKEN E PARÂMETROS VIA PLAYWRIGHT
 #     (apenas lojas VipCommerce)
 # =============================================================
 
 def capturar_dados_loja(loja):
     """
-    Abre o Chrome, acessa a loja, faz uma busca de 'arroz' para
+    Abre o Chromium, acessa a loja, faz uma busca de 'arroz' para
     forçar requisições à API e captura automaticamente:
       - token JWT (Authorization)
       - sessao_id (header)
@@ -198,74 +217,63 @@ def capturar_dados_loja(loja):
     for tentativa in range(1, _MAX_TENTATIVAS + 1):
         print(f"\n🌐 Capturando token: {loja['nome']} (tentativa {tentativa}/{_MAX_TENTATIVAS})")
 
-        driver = None
+        pw = None
+        browser = None
         try:
-            driver = webdriver.Chrome(options=_criar_opcoes_chrome())
-            driver.set_page_load_timeout(30)
+            _garantir_playwright()
+            pw = sync_playwright().start()
+            browser = pw.chromium.launch(headless=True, args=_ARGS_CHROME)
+            page = browser.new_page()
+            page.set_default_timeout(30_000)
 
             resultado = {
                 "token": None, "sessao_id": None, "session": None,
                 "org_id": None, "filial_id": None, "cd_id": None,
             }
 
-            driver.get(loja["url"])
-            time.sleep(5)
+            def on_request(request):
+                url = request.url
+                if "vipcommerce.com.br" not in url:
+                    return
+                headers = request.headers
+                auth = headers.get("authorization", "")
+                sid  = headers.get("sessao-id", "")
+
+                if auth.lower().startswith("bearer ") and sid:
+                    resultado["token"]     = auth[7:].strip()
+                    resultado["sessao_id"] = sid.strip()
+
+                if "session=" in url and not resultado["session"]:
+                    resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
+
+                if "/org/" in url and "/filial/" in url and "/centro_distribuicao/" in url:
+                    partes = url.split("/")
+                    try:
+                        resultado["org_id"]    = partes[partes.index("org") + 1]
+                        resultado["filial_id"] = partes[partes.index("filial") + 1]
+                        resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
+                    except (ValueError, IndexError):
+                        pass
+
+            page.on("request", on_request)
+            page.goto(loja["url"], wait_until="domcontentloaded")
+            page.wait_for_timeout(5000)
 
             try:
-                campo = WebDriverWait(driver, 10).until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR,
-                        "input[type='search'], input[type='text'], "
-                        "input[placeholder*='usca'], input[placeholder*='esquisa']"
-                    ))
+                campo = page.wait_for_selector(
+                    "input[type='search'], input[type='text'], "
+                    "input[placeholder*='usca'], input[placeholder*='esquisa']",
+                    timeout=10_000,
                 )
                 campo.click()
-                campo.send_keys("arroz")
-                time.sleep(4)
+                campo.fill("arroz")
+                page.wait_for_timeout(4000)
             except Exception:
                 pass
 
-            for entry in driver.get_log("performance"):
-                try:
-                    msg = json.loads(entry["message"])["message"]
-                    if msg.get("method") != "Network.requestWillBeSent":
-                        continue
-                    req = msg["params"].get("request", {})
-                    url = req.get("url", "")
-                    headers = req.get("headers", {})
-
-                    if "vipcommerce.com.br" not in url:
-                        continue
-
-                    auth = headers.get("authorization") or headers.get("Authorization", "")
-                    sid  = headers.get("sessao-id") or headers.get("Sessao-Id", "")
-
-                    if auth.startswith("Bearer ") and sid:
-                        resultado["token"]     = auth.replace("Bearer ", "").strip()
-                        resultado["sessao_id"] = sid.strip()
-
-                    if "session=" in url and not resultado["session"]:
-                        resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
-
-                    if "/org/" in url and "/filial/" in url and "/centro_distribuicao/" in url:
-                        partes = url.split("/")
-                        try:
-                            resultado["org_id"]    = partes[partes.index("org") + 1]
-                            resultado["filial_id"] = partes[partes.index("filial") + 1]
-                            resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
-                        except (ValueError, IndexError):
-                            pass
-
-                    if all(resultado[k] for k in resultado):
-                        break
-
-                except Exception:
-                    continue
-
             if resultado["token"] and not resultado["session"]:
                 try:
-                    resultado["session"] = driver.execute_script(
-                        "return localStorage.getItem('session');"
-                    )
+                    resultado["session"] = page.evaluate("localStorage.getItem('session')")
                 except Exception:
                     pass
 
@@ -284,9 +292,14 @@ def capturar_dados_loja(loja):
                 print(f"  🔄 Aguardando 5s antes de tentar novamente...")
                 time.sleep(5)
         finally:
-            if driver is not None:
+            if browser is not None:
                 try:
-                    driver.quit()
+                    browser.close()
+                except Exception:
+                    pass
+            if pw is not None:
+                try:
+                    pw.stop()
                 except Exception:
                     pass
 
@@ -295,55 +308,46 @@ def capturar_dados_loja(loja):
 
 
 # =============================================================
-# 🌿  ALABARCE — Selenium + scraping HTML
+# 🌿  ALABARCE — Playwright + scraping HTML
 # =============================================================
 
-def _dispensar_popup_loja_alabarce(driver):
+def _dispensar_popup_loja_alabarce(page):
     """
     Fecha o popup de seleção de loja/entrega do Alabarce (#stock-picker).
     Clica automaticamente em 'Retirar na loja' para definir a sessão.
     Não levanta exceção se o popup não estiver presente.
     """
     try:
-        modal = driver.find_element(By.ID, "stock-picker")
-        if not modal.is_displayed():
+        modal = page.query_selector("#stock-picker")
+        if not modal or not modal.is_visible():
             return
-        btn = modal.find_element(
-            By.CSS_SELECTOR,
-            "a[href*='current_stock'][href*='withdrawal']",
-        )
-        btn.click()
-        # Aguarda o modal sumir (até 5s)
-        try:
-            WebDriverWait(driver, 5).until(
-                EC.invisibility_of_element_located((By.ID, "stock-picker"))
-            )
-        except Exception:
-            pass
+        btn = modal.query_selector("a[href*='current_stock'][href*='withdrawal']")
+        if btn:
+            btn.click()
+            try:
+                page.wait_for_selector("#stock-picker", state="hidden", timeout=5000)
+            except Exception:
+                pass
     except Exception:
         pass  # popup não presente ou já fechado
 
 
-def _criar_driver_alabarce():
-    """Cria e retorna um driver Chrome headless reutilizável para o Alabarce.
+def _criar_driver_alabarce() -> _PlaywrightContext:
+    """Cria e retorna um _PlaywrightContext reutilizável para o Alabarce.
     Já resolve o popup de seleção de loja na inicialização."""
-    driver = webdriver.Chrome(options=_criar_opcoes_chrome())
-    driver.set_page_load_timeout(30)
-
-    # Acessa a homepage para ativar sessão e dispensar o popup de loja
+    ctx = _PlaywrightContext()
     try:
-        driver.get("https://alabarce.net.br")
-        time.sleep(2)
-        _dispensar_popup_loja_alabarce(driver)
+        ctx.page.goto("https://alabarce.net.br", wait_until="domcontentloaded")
+        ctx.page.wait_for_timeout(2000)
+        _dispensar_popup_loja_alabarce(ctx.page)
     except Exception:
         pass
+    return ctx
 
-    return driver
 
-
-def buscar_produto_alabarce(termo, driver):
+def buscar_produto_alabarce(termo, page):
     """
-    Busca um produto no Alabarce via Selenium.
+    Busca um produto no Alabarce via Playwright.
 
     Navega diretamente para a URL de busca:
         https://alabarce.net.br/products?utf8=✓&keywords={termo}
@@ -356,27 +360,28 @@ def buscar_produto_alabarce(termo, driver):
             "https://alabarce.net.br/products"
             f"?utf8=%E2%9C%93&keywords={requests.utils.quote(termo)}"
         )
-        driver.get(url_busca)
+        page.goto(url_busca, wait_until="domcontentloaded")
 
         # Dispensar popup de loja se reaparecer
-        _dispensar_popup_loja_alabarce(driver)
+        _dispensar_popup_loja_alabarce(page)
 
         # Aguarda os cards de produto aparecerem (máx 8s)
         try:
-            WebDriverWait(driver, 8).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".product-cards .product"))
-            )
-            time.sleep(0.5)
+            page.wait_for_selector(".product-cards .product", timeout=8000)
+            page.wait_for_timeout(500)
         except Exception:
             return []  # sem resultados para este termo
 
-        cards = driver.find_elements(By.CSS_SELECTOR, ".product-cards .product")
+        cards = page.query_selector_all(".product-cards .product")
         produtos = []
 
         for card in cards:
             # Nome
             try:
-                nome = card.find_element(By.CSS_SELECTOR, "h5.product-title").text.strip().upper()
+                el = card.query_selector("h5.product-title")
+                if not el:
+                    continue
+                nome = el.inner_text().strip().upper()
             except Exception:
                 continue
 
@@ -386,16 +391,16 @@ def buscar_produto_alabarce(termo, driver):
             # Preço — pega o preço atual (promoção ou normal)
             preco_num = None
             try:
-                preco_str = card.find_element(
-                    By.CSS_SELECTOR, ".price-amount span"
-                ).text
-                preco_clean = (
-                    preco_str
-                    .replace("R$", "").replace("R$ ", "")
-                    .replace("\xa0", "").strip()
-                    .replace(".", "").replace(",", ".")
-                )
-                preco_num = float(preco_clean)
+                el_preco = card.query_selector(".price-amount span")
+                if el_preco:
+                    preco_str = el_preco.inner_text()
+                    preco_clean = (
+                        preco_str
+                        .replace("R$", "").replace("R$ ", "")
+                        .replace("\xa0", "").strip()
+                        .replace(".", "").replace(",", ".")
+                    )
+                    preco_num = float(preco_clean)
             except Exception:
                 pass
 
@@ -412,7 +417,7 @@ def buscar_produto_alabarce(termo, driver):
         return []
 
 
-def _processar_alabarce_salvo(entrada, nome, driver_alabarce):
+def _processar_alabarce_salvo(entrada, nome, page):
     """
     Quando a escolha já está salva para o Alabarce,
     re-busca o produto para obter o preço atual.
@@ -420,7 +425,7 @@ def _processar_alabarce_salvo(entrada, nome, driver_alabarce):
     """
     desc_salva = normalizar(entrada.get("descricao", ""))
 
-    lista_atual = buscar_produto_alabarce(nome, driver_alabarce)
+    lista_atual = buscar_produto_alabarce(nome, page)
 
     # Tenta achar o mesmo produto pelo nome normalizado
     match = next(
@@ -875,6 +880,7 @@ def main():
 
                 loja_nome  = loja["nome"]
                 chave_loja = loja_nome.lower()
+                page       = driver_alabarce.page
                 escolhas.setdefault(chave_loja, {})
 
                 if chave in escolhas[chave_loja]:
@@ -885,14 +891,14 @@ def main():
                         linha[f"Preço ({loja_nome})"]              = ""
                         linha[f"Status ({loja_nome})"]             = "Não encontrado"
                     else:
-                        res = _processar_alabarce_salvo(entrada, nome, driver_alabarce)
+                        res = _processar_alabarce_salvo(entrada, nome, page)
                         print(f"  [{loja_nome}] → {res['descricao']} | R$ {res['preco']} | {res['status']}")
                         linha[f"Produto Encontrado ({loja_nome})"] = res["descricao"]
                         linha[f"Preço ({loja_nome})"]              = res["preco"]
                         linha[f"Status ({loja_nome})"]             = res["status"]
                     continue
 
-                lista = buscar_produto_alabarce(nome, driver_alabarce)
+                lista = buscar_produto_alabarce(nome, page)
 
                 if not lista:
                     print(f"  [{loja_nome}] → Nenhum resultado.")
