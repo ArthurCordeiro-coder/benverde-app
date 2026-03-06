@@ -66,9 +66,22 @@ class Service(_ServiceBase):
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _criar_opcoes_chrome() -> webdriver.ChromeOptions:
+    """Opções Chrome compartilhadas para todas as instâncias."""
+    options = webdriver.ChromeOptions()
+    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option("useAutomationExtension", False)
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1280,800")
+    return options
 
 # =============================================================
 # ⚙️  CONFIGURAÇÃO DE LOJAS
@@ -182,31 +195,12 @@ def capturar_dados_loja(loja):
     }
     _MAX_TENTATIVAS = 3
 
-    # ChromeDriver instalado uma vez, reutilizado nas tentativas
-    try:
-        driver_path = ChromeDriverManager().install()
-    except Exception as exc:
-        print(f"❌ {loja['nome']}: falha ao instalar ChromeDriver — {exc}")
-        return _RESULTADO_VAZIO
-
     for tentativa in range(1, _MAX_TENTATIVAS + 1):
         print(f"\n🌐 Capturando token: {loja['nome']} (tentativa {tentativa}/{_MAX_TENTATIVAS})")
 
-        options = webdriver.ChromeOptions()
-        options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
-        options.add_argument("--headless=new")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--window-size=1280,800")
-
         driver = None
         try:
-            driver = webdriver.Chrome(
-                service=Service(driver_path),
-                options=options,
-            )
+            driver = webdriver.Chrome(options=_criar_opcoes_chrome())
             driver.set_page_load_timeout(30)
 
             resultado = {
@@ -333,17 +327,7 @@ def _dispensar_popup_loja_alabarce(driver):
 def _criar_driver_alabarce():
     """Cria e retorna um driver Chrome headless reutilizável para o Alabarce.
     Já resolve o popup de seleção de loja na inicialização."""
-    options = webdriver.ChromeOptions()
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option("useAutomationExtension", False)
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--window-size=1280,800")
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
-        options=options,
-    )
+    driver = webdriver.Chrome(options=_criar_opcoes_chrome())
     driver.set_page_load_timeout(30)
 
     # Acessa a homepage para ativar sessão e dispensar o popup de loja
