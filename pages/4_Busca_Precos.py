@@ -32,7 +32,6 @@ if _BUSCA_DIR not in sys.path:
 from buscar_precos import (  # noqa: E402
     LOJAS,
     _INALTERADO,
-    _criar_driver_alabarce,
     _processar_alabarce_salvo,
     _processar_loja_vc,
     buscar_produto,
@@ -61,7 +60,6 @@ def _init():
         "busca_fase":           "idle",
         "busca_produtos":       [],
         "busca_dados_lojas":    {},
-        "busca_driver_ala":     None,
         "busca_escolhas":       {},
         # Lista de (nome_produto, loja_nome, [candidatos]) aguardando escolha
         "busca_pendentes":      [],
@@ -207,29 +205,11 @@ def _fase_capturando():
         raise RuntimeError("Nenhuma loja respondeu. Verifique a conexão e tente novamente.")
     st.session_state["busca_dados_lojas"] = dados_lojas
 
-    # ── Driver Alabarce — só cria se necessário ──────────────
+    # ── Alabarce — SEM driver persistente ────────────────────
+    # O Playwright é thread-bound e o Streamlit muda de thread entre fases.
+    # Usamos buscar_produto_alabarce(nome) sem driver — tenta requests
+    # primeiro, fallback Playwright efêmero se necessário.
     lojas_ala = [l for l in LOJAS if l.get("tipo") == "alabarce"]
-    precisa_driver_ala = False
-    for loja in lojas_ala:
-        chave_loja = loja["nome"].lower()
-        esc_loja   = escolhas.get(chave_loja, {})
-        if any(
-            normalizar(p) not in esc_loja or esc_loja.get(normalizar(p)) is None
-            for p in st.session_state["busca_produtos"]
-        ):
-            precisa_driver_ala = True
-            break
-
-    # Tenta sem Playwright primeiro (requests + BS4)
-    # Testa APENAS com requests — sem abrir browser efêmero
-    driver_ala = None
-    if precisa_driver_ala:
-        from buscar_precos import _buscar_alabarce_requests
-        teste = _buscar_alabarce_requests("arroz")
-        if not teste:
-            # requests não trouxe resultados, precisa de Playwright
-            driver_ala = _criar_driver_alabarce()
-    st.session_state["busca_driver_ala"] = driver_ala
 
     # ── Coleta candidatos para produtos sem escolha salva ────
     pendentes: list = []
@@ -258,14 +238,14 @@ def _fase_capturando():
                 else:
                     pendentes.append((nome, loja_nome, candidatos))
 
-        # Alabarce
+        # Alabarce (sem driver — usa requests + fallback Playwright efêmero)
         for loja in lojas_ala:
             loja_nome  = loja["nome"]
             chave_loja = loja_nome.lower()
             esc_loja   = escolhas.get(chave_loja, {})
             precisa_buscar = chave not in esc_loja or esc_loja.get(chave) is None
             if precisa_buscar:
-                lista = buscar_produto_alabarce(nome, driver_ala) if driver_ala else buscar_produto_alabarce(nome)
+                lista = buscar_produto_alabarce(nome)  # sem driver
                 candidatos = encontrar_candidatos(nome, lista or [])
                 if not candidatos:
                     escolhas.setdefault(chave_loja, {})[chave] = None
@@ -291,7 +271,6 @@ def _fase_buscando(progress_bar, status_text):
     produtos    = st.session_state["busca_produtos"]
     escolhas    = st.session_state["busca_escolhas"]
     dados_lojas = st.session_state["busca_dados_lojas"]
-    driver_ala  = st.session_state.get("busca_driver_ala")
     resultados  = []
 
     lojas_vc_ativas = [
@@ -301,63 +280,54 @@ def _fase_buscando(progress_bar, status_text):
         and l["nome"] in dados_lojas
     ]
 
-    try:
-        for i, nome in enumerate(produtos):
-            chave = normalizar(nome)
-            status_text.text(f"[{i + 1}/{len(produtos)}] {nome}")
-            linha = {"Produto Buscado": nome}
+    for i, nome in enumerate(produtos):
+        chave = normalizar(nome)
+        status_text.text(f"[{i + 1}/{len(produtos)}] {nome}")
+        linha = {"Produto Buscado": nome}
 
-            # ── VipCommerce — SEQUENCIAL (evita crashes de RAM) ──
-            novas: dict = {}
-            for loja, dados in lojas_vc_ativas:
-                try:
-                    campos, escolha_nova = _processar_loja_vc(
-                        nome, loja, dados,
-                        escolhas.setdefault(loja["nome"].lower(), {}),
-                        chave,
-                    )
-                    if campos and escolha_nova != "TOKEN_EXPIRED":
-                        linha.update(campos)
-                    if (
-                        escolha_nova is not _INALTERADO
-                        and escolha_nova != "TOKEN_EXPIRED"
-                    ):
-                        novas[loja["nome"].lower()] = escolha_nova
-                except Exception:
-                    pass
+        # ── VipCommerce — SEQUENCIAL (evita crashes de RAM) ──
+        novas: dict = {}
+        for loja, dados in lojas_vc_ativas:
+            try:
+                campos, escolha_nova = _processar_loja_vc(
+                    nome, loja, dados,
+                    escolhas.setdefault(loja["nome"].lower(), {}),
+                    chave,
+                )
+                if campos and escolha_nova != "TOKEN_EXPIRED":
+                    linha.update(campos)
+                if (
+                    escolha_nova is not _INALTERADO
+                    and escolha_nova != "TOKEN_EXPIRED"
+                ):
+                    novas[loja["nome"].lower()] = escolha_nova
+            except Exception:
+                pass
 
-            if novas:
-                for cl, esc in novas.items():
-                    escolhas[cl][chave] = esc
-                salvar_escolhas(escolhas)
+        if novas:
+            for cl, esc in novas.items():
+                escolhas[cl][chave] = esc
+            salvar_escolhas(escolhas)
 
-            # ── Alabarce — sequencial ────────────────────────────
-            for loja in LOJAS:
-                if loja.get("tipo") != "alabarce":
-                    continue
-                loja_nome  = loja["nome"]
-                chave_loja = loja_nome.lower()
-                entrada    = escolhas.get(chave_loja, {}).get(chave)
-                if entrada:
-                    if driver_ala:
-                        res = _processar_alabarce_salvo(entrada, nome, driver_ala)
-                    else:
-                        res = _processar_alabarce_salvo(entrada, nome, None)
-                    linha[f"Produto Encontrado ({loja_nome})"] = res["descricao"]
-                    linha[f"Preço ({loja_nome})"]              = res["preco"]
-                    linha[f"Status ({loja_nome})"]             = res["status"]
-                else:
-                    linha[f"Produto Encontrado ({loja_nome})"] = ""
-                    linha[f"Preço ({loja_nome})"]              = ""
-                    linha[f"Status ({loja_nome})"]             = "Não encontrado"
+        # ── Alabarce — sem driver persistente ────────────────
+        for loja in LOJAS:
+            if loja.get("tipo") != "alabarce":
+                continue
+            loja_nome  = loja["nome"]
+            chave_loja = loja_nome.lower()
+            entrada    = escolhas.get(chave_loja, {}).get(chave)
+            if entrada:
+                res = _processar_alabarce_salvo(entrada, nome, None)
+                linha[f"Produto Encontrado ({loja_nome})"] = res["descricao"]
+                linha[f"Preço ({loja_nome})"]              = res["preco"]
+                linha[f"Status ({loja_nome})"]             = res["status"]
+            else:
+                linha[f"Produto Encontrado ({loja_nome})"] = ""
+                linha[f"Preço ({loja_nome})"]              = ""
+                linha[f"Status ({loja_nome})"]             = "Não encontrado"
 
-            resultados.append(linha)
-            progress_bar.progress((i + 1) / len(produtos))
-
-    finally:
-        if driver_ala:
-            driver_ala.quit()
-            st.session_state["busca_driver_ala"] = None
+        resultados.append(linha)
+        progress_bar.progress((i + 1) / len(produtos))
 
     st.session_state["busca_resultados"]  = resultados
     st.session_state["busca_csv_conteudo"] = _gerar_csv(resultados)
@@ -485,7 +455,7 @@ def main():
         if st.button("🔄 Nova busca"):
             for k in [
                 "busca_fase", "busca_produtos", "busca_dados_lojas",
-                "busca_driver_ala", "busca_escolhas", "busca_pendentes",
+                "busca_escolhas", "busca_pendentes",
                 "busca_idx", "busca_cand_sel", "busca_resultados",
                 "busca_csv_conteudo",
             ]:

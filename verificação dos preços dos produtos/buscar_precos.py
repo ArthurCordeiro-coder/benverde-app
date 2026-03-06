@@ -387,7 +387,12 @@ def capturar_dados_loja(loja: dict) -> dict:
                         resultado["cd_id"] = cd_id
 
     if resultado["token"]:
-        log.info(f"{loja['nome']}: org={resultado.get('org_id')} cd={resultado.get('cd_id')}")
+        log.info(
+            f"{loja['nome']}: org={resultado.get('org_id')} cd={resultado.get('cd_id')} "
+            f"sessao_id={resultado.get('sessao_id', '')[:8]}... "
+            f"session={resultado.get('session', '')[:8]}... "
+            f"token={resultado.get('token', '')[:20]}..."
+        )
     else:
         log.error(f"{loja['nome']}: falha total na captura")
 
@@ -422,33 +427,52 @@ def montar_headers(loja: dict, dados: dict) -> dict:
 def buscar_produto(termo: str, loja: dict, dados: dict) -> list | None:
     """Busca na API VipCommerce. Retorna lista, [] ou None (token expirado)."""
     base = "https://services.vipcommerce.com.br/api-admin/v1"
-    url = (
+
+    # Monta URL com session
+    url_base = (
         f"{base}/org/{dados['org_id']}/filial/{dados['filial_id']}"
         f"/centro_distribuicao/{dados['cd_id']}/loja/buscas/produtos"
         f"/termo/{req.utils.quote(termo)}"
-        f"?page=1&session={dados.get('session', '')}"
     )
-    try:
-        r = req.get(url, headers=montar_headers(loja, dados), timeout=15)
-        if r.status_code == 401:
-            return None
-        if r.status_code != 200:
-            log.warning(f"Status {r.status_code} para '{termo}' em {loja['nome']}")
+    session_val = dados.get("session", "")
+    urls_tentar = [
+        f"{url_base}?page=1&session={session_val}" if session_val else f"{url_base}?page=1",
+        f"{url_base}?page=1",  # retry sem session
+    ]
+
+    headers = montar_headers(loja, dados)
+
+    for url in urls_tentar:
+        try:
+            r = req.get(url, headers=headers, timeout=15)
+            if r.status_code == 401:
+                return None  # token expirado
+            if r.status_code == 403:
+                log.warning(
+                    f"403 para '{termo}' em {loja['nome']} "
+                    f"(sessao_id={dados.get('sessao_id', '')[:8]}...) — tentando próxima URL"
+                )
+                continue  # tenta sem session
+            if r.status_code != 200:
+                log.warning(f"Status {r.status_code} para '{termo}' em {loja['nome']}")
+                return []
+            d = r.json()
+            if isinstance(d, dict):
+                data = d.get("data", {})
+                if isinstance(data, dict) and "produtos" in data:
+                    return data["produtos"]
+                if isinstance(data, list):
+                    return data
+                for chave in ("produtos", "items", "results"):
+                    if chave in d and isinstance(d[chave], list):
+                        return d[chave]
+            return d if isinstance(d, list) else []
+        except Exception as e:
+            log.error(f"Erro busca '{termo}' em {loja['nome']}: {e}")
             return []
-        d = r.json()
-        if isinstance(d, dict):
-            data = d.get("data", {})
-            if isinstance(data, dict) and "produtos" in data:
-                return data["produtos"]
-            if isinstance(data, list):
-                return data
-            for chave in ("produtos", "items", "results"):
-                if chave in d and isinstance(d[chave], list):
-                    return d[chave]
-        return d if isinstance(d, list) else []
-    except Exception as e:
-        log.error(f"Erro busca '{termo}' em {loja['nome']}: {e}")
-        return []
+
+    log.warning(f"Todas as tentativas falharam (403) para '{termo}' em {loja['nome']}")
+    return []
 
 
 def buscar_detalhes(produto_id, loja: dict, dados: dict) -> dict | None:
