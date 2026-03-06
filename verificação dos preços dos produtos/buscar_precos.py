@@ -221,28 +221,38 @@ def capturar_dados_loja(loja):
             "org_id": None, "filial_id": None, "cd_id": None,
         }
         try:
-            import subprocess as _sp
-            resultado_check = _sp.run(
-                ["playwright", "install", "chromium", "--with-deps"],
-                capture_output=True, text=True,
-            )
-            print(f"  🔧 Playwright install: {resultado_check.stdout} {resultado_check.stderr}")
             with sync_playwright() as p:
                 browser = p.chromium.launch(
                     headless=True,
                     args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
                 )
-                context = browser.new_context()
+                context = browser.new_context(
+                    user_agent=(
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                    )
+                )
                 page = context.new_page()
 
-                # Intercepta requisições de rede
-                def interceptar(request):
-                    if "vipcommerce.com.br" not in request.url:
+                # CDP session — captura requisições exatamente como o Selenium
+                # performance log fazia com Network.requestWillBeSent
+                client = context.new_cdp_session(page)
+                client.send("Network.enable")
+
+                urls_capturadas = []  # debug
+
+                def on_cdp_request(params):
+                    req = params.get("request", {})
+                    url = req.get("url", "")
+                    headers = req.get("headers", {})
+
+                    urls_capturadas.append(url[:100])  # debug
+
+                    if "vipcommerce.com.br" not in url:
                         return
-                    headers = request.headers
-                    auth = headers.get("authorization", "")
-                    sid  = headers.get("sessao-id", "")
-                    url  = request.url
+
+                    auth = headers.get("Authorization") or headers.get("authorization", "")
+                    sid  = headers.get("sessao-id") or headers.get("Sessao-Id", "")
 
                     if auth.startswith("Bearer ") and sid and not resultado["token"]:
                         resultado["token"]     = auth.replace("Bearer ", "").strip()
@@ -260,9 +270,9 @@ def capturar_dados_loja(loja):
                         except (ValueError, IndexError):
                             pass
 
-                page.on("request", interceptar)
+                client.on("Network.requestWillBeSent", on_cdp_request)
 
-                page.goto(loja["url"], timeout=30000)
+                page.goto(loja["url"], wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(5000)
 
                 # Tenta digitar no campo de busca
@@ -276,6 +286,12 @@ def capturar_dados_loja(loja):
                     page.wait_for_timeout(4000)
                 except Exception:
                     pass
+
+                # Debug: exibe quantas URLs foram capturadas e amostra
+                vc_urls = [u for u in urls_capturadas if "vipcommerce" in u]
+                print(f"  🔍 {len(urls_capturadas)} URLs capturadas, {len(vc_urls)} vipcommerce")
+                if not vc_urls and urls_capturadas:
+                    print(f"  🔍 Amostra: {urls_capturadas[:3]}")
 
                 # Tenta pegar session do localStorage como fallback
                 if resultado["token"] and not resultado["session"]:
@@ -297,7 +313,7 @@ def capturar_dados_loja(loja):
         except Exception as exc:
             import traceback
             print(f"  ⚠️  {loja['nome']} tentativa {tentativa} falhou: {exc}")
-            print(f"  🔍 Traceback completo:\n{traceback.format_exc()}")
+            print(f"  🔍 Traceback:\n{traceback.format_exc()}")
             if tentativa < _MAX_TENTATIVAS:
                 print(f"  🔄 Aguardando 5s antes de tentar novamente...")
                 time.sleep(5)
