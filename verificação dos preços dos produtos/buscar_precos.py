@@ -167,45 +167,57 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
             page = context.new_page()
             page.set_default_timeout(30_000)
 
-            encontrou = {"ok": False}
-
             def interceptar(request):
-                if encontrou["ok"] or "vipcommerce" not in request.url:
+                if "vipcommerce" not in request.url:
                     return
                 headers = request.headers
                 auth = headers.get("authorization", "")
                 token_valor = auth.replace("Bearer", "").replace("bearer", "").strip()
 
-                if not token_valor or len(token_valor) < 20:
-                    return
-
-                resultado["token"]     = token_valor
-                resultado["sessao_id"] = headers.get("sessao-id", "").strip()
+                # Captura token na primeira requisição autenticada
+                if token_valor and len(token_valor) > 20 and not resultado["token"]:
+                    resultado["token"]     = token_valor
+                    resultado["sessao_id"] = headers.get("sessao-id", "").strip()
 
                 url = request.url
-                if "session=" in url:
+
+                # Captura session de qualquer requisição
+                if "session=" in url and not resultado["session"]:
                     resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
-                if "/org/" in url and "/centro_distribuicao/" in url:
+
+                # Captura org/filial/cd de requisições com esses segmentos
+                if "/org/" in url and not resultado["org_id"]:
                     partes = url.split("/")
                     try:
-                        resultado["org_id"]    = partes[partes.index("org") + 1]
-                        resultado["filial_id"] = partes[partes.index("filial") + 1]
-                        resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
+                        idx_org = partes.index("org")
+                        resultado["org_id"] = partes[idx_org + 1].split("?")[0]
+                    except (ValueError, IndexError):
+                        pass
+                    try:
+                        idx_fil = partes.index("filial")
+                        resultado["filial_id"] = partes[idx_fil + 1].split("?")[0]
                     except (ValueError, IndexError):
                         pass
 
-                encontrou["ok"] = True
+                if "/centro_distribuicao/" in url and not resultado["cd_id"]:
+                    partes = url.split("/")
+                    try:
+                        idx_cd = partes.index("centro_distribuicao")
+                        resultado["cd_id"] = partes[idx_cd + 1].split("?")[0]
+                    except (ValueError, IndexError):
+                        pass
 
             page.on("request", interceptar)
             page.goto(loja["url"], wait_until="domcontentloaded", timeout=30_000)
 
-            # Espera até 20s pelo token
-            for _ in range(40):
-                if encontrou["ok"]:
+            # Espera até 15s pelo token
+            for _ in range(30):
+                if resultado["token"]:
                     break
                 page.wait_for_timeout(500)
 
             # Se pegou token mas não cd_id, digita algo para forçar
+            # requisições à API de busca (que contém org/filial/cd na URL)
             if resultado["token"] and not resultado["cd_id"]:
                 try:
                     campo = page.locator(
@@ -214,12 +226,17 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                     ).first
                     campo.click()
                     campo.type("arroz")
-                    for _ in range(16):
+                    # Espera até 10s pelo cd_id
+                    for _ in range(20):
                         if resultado["cd_id"]:
                             break
                         page.wait_for_timeout(500)
                 except Exception:
                     pass
+
+            # Última tentativa: espera mais um pouco caso requests estejam em voo
+            if resultado["token"] and not resultado["cd_id"]:
+                page.wait_for_timeout(3000)
 
             # Tenta ler vip-token dos cookies do browser
             if not resultado["token"]:
@@ -242,24 +259,41 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
         return None
 
 
-def _obter_dados_filial(token: str, dominio: str) -> dict | None:
+def _obter_dados_filial(token: str, dominio: str, sessao_id: str = "") -> dict | None:
     """GET /organizacoes/filiais/dominio/{dominio} → org_id, filial_id."""
     url = f"https://services.vipcommerce.com.br/organizacoes/filiais/dominio/{dominio}"
+
+    # Determina o Origin correto (pode ter www. ou não)
+    # Para "loja.shibata.com.br" → Origin é "https://www.loja.shibata.com.br"
+    origin = f"https://www.{dominio}"
+
     headers = {
         **_HEADERS_NAVEGADOR,
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
-        "Origin": f"https://www.{dominio}",
+        "Origin": origin,
+        "Referer": f"{origin}/",
+        "sessao-id": sessao_id,
     }
     try:
         resp = req.get(url, headers=headers, timeout=15)
-        resp.raise_for_status()
+        # Verifica se tem corpo antes de parsear
+        if resp.status_code == 304 or not resp.text or not resp.text.strip():
+            log.warning(f"Filial ({dominio}): resposta vazia (status {resp.status_code})")
+            return None
+        if resp.status_code != 200:
+            log.warning(f"Filial ({dominio}): status {resp.status_code}")
+            return None
         data = resp.json().get("data", {})
         org  = data.get("organizacao", {})
-        return {
+        result = {
             "filial_id": str(data.get("id", "")),
             "org_id":    str(org.get("id", "")),
         }
+        if result["org_id"] and result["filial_id"]:
+            return result
+        log.warning(f"Filial ({dominio}): org_id ou filial_id vazio no JSON")
+        return None
     except Exception as e:
         log.warning(f"Erro filial ({dominio}): {e}")
         return None
@@ -320,7 +354,7 @@ def capturar_dados_loja(loja: dict) -> dict:
         resultado["sessao_id"] = str(uuid.uuid4())
         resultado["session"]   = str(uuid.uuid4())
 
-        dados_filial = _obter_dados_filial(token, loja["dominio"])
+        dados_filial = _obter_dados_filial(token, loja["dominio"], resultado["sessao_id"])
         if dados_filial:
             resultado["org_id"]    = dados_filial["org_id"]
             resultado["filial_id"] = dados_filial["filial_id"]
@@ -341,7 +375,8 @@ def capturar_dados_loja(loja: dict) -> dict:
                 resultado[chave] = dados_pw[chave]
 
         if not resultado["org_id"] and resultado["token"]:
-            dados_filial = _obter_dados_filial(resultado["token"], loja["dominio"])
+            sessao = resultado.get("sessao_id") or str(uuid.uuid4())
+            dados_filial = _obter_dados_filial(resultado["token"], loja["dominio"], sessao)
             if dados_filial:
                 resultado["org_id"]    = dados_filial["org_id"]
                 resultado["filial_id"] = dados_filial["filial_id"]

@@ -221,13 +221,13 @@ def _fase_capturando():
             break
 
     # Tenta sem Playwright primeiro (requests + BS4)
-    # Só cria driver se o site exigir JS
+    # Testa APENAS com requests — sem abrir browser efêmero
     driver_ala = None
     if precisa_driver_ala:
-        # Testa se requests funciona para o Alabarce
-        teste = buscar_produto_alabarce("arroz")  # busca rápida sem driver
+        from buscar_precos import _buscar_alabarce_requests
+        teste = _buscar_alabarce_requests("arroz")
         if not teste:
-            # requests não funcionou, precisa de Playwright
+            # requests não trouxe resultados, precisa de Playwright
             driver_ala = _criar_driver_alabarce()
     st.session_state["busca_driver_ala"] = driver_ala
 
