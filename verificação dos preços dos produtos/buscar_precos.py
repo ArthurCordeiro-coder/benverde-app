@@ -221,7 +221,12 @@ def capturar_dados_loja(loja):
             "org_id": None, "filial_id": None, "cd_id": None,
         }
         try:
-            _garantir_playwright()
+            import subprocess as _sp
+            resultado_check = _sp.run(
+                ["playwright", "install", "chromium", "--with-deps"],
+                capture_output=True, text=True,
+            )
+            print(f"  🔧 Playwright install: {resultado_check.stdout} {resultado_check.stderr}")
             with sync_playwright() as p:
                 browser = p.chromium.launch(
                     headless=True,
@@ -290,7 +295,9 @@ def capturar_dados_loja(loja):
             return resultado
 
         except Exception as exc:
+            import traceback
             print(f"  ⚠️  {loja['nome']} tentativa {tentativa} falhou: {exc}")
+            print(f"  🔍 Traceback completo:\n{traceback.format_exc()}")
             if tentativa < _MAX_TENTATIVAS:
                 print(f"  🔄 Aguardando 5s antes de tentar novamente...")
                 time.sleep(5)
