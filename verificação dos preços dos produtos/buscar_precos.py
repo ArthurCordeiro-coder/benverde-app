@@ -741,6 +741,9 @@ def _processar_loja_vc(nome, loja, dados, escolhas_loja, chave):
 # =============================================================
 
 def main():
+    import subprocess
+    subprocess.run(["playwright", "install", "chromium"], check=False)
+
     print("=" * 55)
     print("  Busca de Preços — VipCommerce + Alabarce")
     print("=" * 55)
