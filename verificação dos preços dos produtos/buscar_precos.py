@@ -272,8 +272,29 @@ def capturar_dados_loja(loja):
 
                 client.on("Network.requestWillBeSent", on_cdp_request)
 
+                # Intercepta também via page.on("request") para comparar cobertura
+                urls_page_on = []
+
+                def interceptar(request):
+                    urls_page_on.append(request.url)
+
+                page.on("request", interceptar)
+
+                # Intercepta respostas vipcommerce
+                respostas_vip = []
+
+                def interceptar_resposta(response):
+                    if "vipcommerce" in response.url:
+                        respostas_vip.append(response.url)
+
+                page.on("response", interceptar_resposta)
+
                 page.goto(loja["url"], wait_until="domcontentloaded", timeout=30000)
                 page.wait_for_timeout(5000)
+
+                print(f"  🔍 Título da página: {page.title()}")
+                print(f"  🔍 URL final: {page.url}")
+                print(f"  🔍 Conteúdo (primeiros 500 chars): {page.content()[:500]}")
 
                 # Tenta digitar no campo de busca
                 try:
@@ -287,11 +308,12 @@ def capturar_dados_loja(loja):
                 except Exception:
                     pass
 
-                # Debug: exibe quantas URLs foram capturadas e amostra
-                vc_urls = [u for u in urls_capturadas if "vipcommerce" in u]
-                print(f"  🔍 {len(urls_capturadas)} URLs capturadas, {len(vc_urls)} vipcommerce")
-                if not vc_urls and urls_capturadas:
-                    print(f"  🔍 Amostra: {urls_capturadas[:3]}")
+                # Debug completo de URLs
+                print(f"  🔍 {loja['nome']}: {len(urls_capturadas)} URLs via CDP, {len(urls_page_on)} via page.on")
+                print(f"  🔍 Primeiras URLs (CDP): {urls_capturadas[:5]}")
+                vip_urls = [u for u in urls_capturadas if "vipcommerce" in u]
+                print(f"  🔍 URLs VipCommerce (CDP): {vip_urls[:5]}")
+                print(f"  🔍 Respostas VipCommerce: {respostas_vip[:5]}")
 
                 # Tenta pegar session do localStorage como fallback
                 if resultado["token"] and not resultado["session"]:
