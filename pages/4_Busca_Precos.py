@@ -2,7 +2,7 @@
 Busca de Preços — interface Streamlit
 ======================================
 Integra o pipeline buscar_precos.py com UI interativa:
-  1. Captura tokens das lojas VipCommerce em paralelo
+  1. Captura tokens das lojas VipCommerce (sequencial, baixo uso de RAM)
   2. Para produtos sem escolha salva, exibe popup de escolha
   3. Busca os preços finais e exibe/salva o resultado
 """
@@ -11,8 +11,6 @@ import csv
 import io
 import os
 import sys
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 import pandas as pd
@@ -33,8 +31,6 @@ if _BUSCA_DIR not in sys.path:
 
 from buscar_precos import (  # noqa: E402
     LOJAS,
-    MAX_WORKERS_LOJAS,
-    MAX_WORKERS_TOKENS,
     _INALTERADO,
     _criar_driver_alabarce,
     _processar_alabarce_salvo,
@@ -50,10 +46,10 @@ from buscar_precos import (  # noqa: E402
 )
 
 # ─────────────────────────────────────────────────────────────
-# Constantes
+# Constantes — caminhos relativos (funciona em Linux e Windows)
 # ─────────────────────────────────────────────────────────────
-_CSV_PRODUTOS      = os.path.join(_BUSCA_DIR, "produtos.csv")
-_PASTA_RESULTADOS  = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\precos"
+_CSV_PRODUTOS     = os.path.join(_BUSCA_DIR, "produtos.csv")
+_PASTA_RESULTADOS = os.path.join(_BUSCA_DIR, "dados", "precos")
 
 
 # ─────────────────────────────────────────────────────────────
@@ -72,7 +68,7 @@ def _init():
         "busca_idx":            0,       # índice da escolha atual
         "busca_cand_sel":       None,    # candidato expandido na tela de detalhe
         "busca_resultados":     [],
-        "busca_csv_path":       "",
+        "busca_csv_conteudo":   "",      # conteúdo CSV para download
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -193,34 +189,25 @@ def _fase_capturando():
     escolhas = carregar_escolhas()
     st.session_state["busca_escolhas"] = escolhas
 
-    # Tokens VipCommerce em paralelo
+    # ── Tokens VipCommerce — SEQUENCIAL (economiza RAM) ──────
     lojas_vc = [l for l in LOJAS if l.get("tipo", "vipcommerce") == "vipcommerce"]
     dados_lojas: dict = {}
-    _TIMEOUT_TOKEN = 90  # segundos por loja; se passar disso, pula e continua
-    ex = ThreadPoolExecutor(max_workers=min(MAX_WORKERS_TOKENS, len(lojas_vc) or 1))
-    futuros = {ex.submit(capturar_dados_loja, loja): loja for loja in lojas_vc}
-    try:
-        for fut in as_completed(futuros, timeout=_TIMEOUT_TOKEN):
-            loja = futuros[fut]
-            try:
-                resultado = fut.result()
-                if resultado.get("token"):
-                    dados_lojas[loja["nome"]] = resultado
-                else:
-                    st.warning(f"⚠️ Token não capturado para {loja['nome']} — loja ignorada.")
-            except Exception as exc:
-                st.warning(f"⚠️ Falha ao capturar token de {loja['nome']}: {exc}")
-    except TimeoutError:
-        lojas_ok  = list(dados_lojas.keys())
-        lojas_nok = [l["nome"] for l in lojas_vc if l["nome"] not in lojas_ok]
-        st.warning(f"⚠️ Timeout na captura de tokens. Lojas ignoradas: {', '.join(lojas_nok)}")
-    finally:
-        ex.shutdown(wait=False)  # não bloqueia esperando threads travadas
+
+    for loja in lojas_vc:
+        try:
+            resultado = capturar_dados_loja(loja)
+            if resultado.get("token"):
+                dados_lojas[loja["nome"]] = resultado
+            else:
+                st.warning(f"⚠️ Token não capturado para {loja['nome']} — loja ignorada.")
+        except Exception as exc:
+            st.warning(f"⚠️ Falha ao capturar token de {loja['nome']}: {exc}")
+
     if not dados_lojas:
-        raise RuntimeError("Nenhuma loja respondeu a tempo. Verifique a conexão e tente novamente.")
+        raise RuntimeError("Nenhuma loja respondeu. Verifique a conexão e tente novamente.")
     st.session_state["busca_dados_lojas"] = dados_lojas
 
-    # Driver Alabarce — só cria se há produtos sem escolha salva (ausente ou None)
+    # ── Driver Alabarce — só cria se necessário ──────────────
     lojas_ala = [l for l in LOJAS if l.get("tipo") == "alabarce"]
     precisa_driver_ala = False
     for loja in lojas_ala:
@@ -232,14 +219,22 @@ def _fase_capturando():
         ):
             precisa_driver_ala = True
             break
-    if precisa_driver_ala:
-        st.session_state["busca_driver_ala"] = _criar_driver_alabarce()
 
-    # Coleta candidatos para produtos sem escolha salva
+    # Tenta sem Playwright primeiro (requests + BS4)
+    # Só cria driver se o site exigir JS
+    driver_ala = None
+    if precisa_driver_ala:
+        # Testa se requests funciona para o Alabarce
+        teste = buscar_produto_alabarce("arroz")  # busca rápida sem driver
+        if not teste:
+            # requests não funcionou, precisa de Playwright
+            driver_ala = _criar_driver_alabarce()
+    st.session_state["busca_driver_ala"] = driver_ala
+
+    # ── Coleta candidatos para produtos sem escolha salva ────
     pendentes: list = []
     salvou = False
     produtos = st.session_state["busca_produtos"]
-    driver_ala = st.session_state.get("busca_driver_ala")
 
     for nome in produtos:
         chave = normalizar(nome)
@@ -269,9 +264,9 @@ def _fase_capturando():
             chave_loja = loja_nome.lower()
             esc_loja   = escolhas.get(chave_loja, {})
             precisa_buscar = chave not in esc_loja or esc_loja.get(chave) is None
-            if precisa_buscar and driver_ala:
-                lista      = buscar_produto_alabarce(nome, driver_ala) or []
-                candidatos = encontrar_candidatos(nome, lista)
+            if precisa_buscar:
+                lista = buscar_produto_alabarce(nome, driver_ala) if driver_ala else buscar_produto_alabarce(nome)
+                candidatos = encontrar_candidatos(nome, lista or [])
                 if not candidatos:
                     escolhas.setdefault(chave_loja, {})[chave] = None
                     salvou = True
@@ -306,67 +301,48 @@ def _fase_buscando(progress_bar, status_text):
         and l["nome"] in dados_lojas
     ]
 
-    # Timeout por produto: 3 lojas × 15s cada + folga = 60s
-    _TIMEOUT_PRODUTO = 60
-
     try:
         for i, nome in enumerate(produtos):
             chave = normalizar(nome)
             status_text.text(f"[{i + 1}/{len(produtos)}] {nome}")
             linha = {"Produto Buscado": nome}
 
-            # VipCommerce: 3 lojas em paralelo, 1 produto por vez
-            # (evita rate-limit: cada servidor recebe só 1 conexão simultânea)
+            # ── VipCommerce — SEQUENCIAL (evita crashes de RAM) ──
             novas: dict = {}
-            with ThreadPoolExecutor(
-                max_workers=min(MAX_WORKERS_LOJAS, len(lojas_vc_ativas) or 1)
-            ) as ex:
-                futuros = {
-                    ex.submit(
-                        _processar_loja_vc,
+            for loja, dados in lojas_vc_ativas:
+                try:
+                    campos, escolha_nova = _processar_loja_vc(
                         nome, loja, dados,
                         escolhas.setdefault(loja["nome"].lower(), {}),
                         chave,
-                    ): loja
-                    for loja, dados in lojas_vc_ativas
-                }
-                try:
-                    for fut in as_completed(futuros, timeout=_TIMEOUT_PRODUTO):
-                        loja_f = futuros[fut]
-                        try:
-                            campos, escolha_nova = fut.result()
-                            if campos and escolha_nova != "TOKEN_EXPIRED":
-                                linha.update(campos)
-                            if (
-                                escolha_nova is not _INALTERADO
-                                and escolha_nova != "TOKEN_EXPIRED"
-                            ):
-                                novas[loja_f["nome"].lower()] = escolha_nova
-                        except Exception:
-                            pass
-                except TimeoutError:
-                    lojas_ok = {k for k in linha if k != "Produto Buscado"}
-                    for loja_f, _ in lojas_vc_ativas:
-                        col = f"Status ({loja_f['nome']})"
-                        if col not in lojas_ok:
-                            linha[f"Produto Encontrado ({loja_f['nome']})"] = ""
-                            linha[f"Preço ({loja_f['nome']})"]               = ""
-                            linha[col]                                        = "Timeout"
+                    )
+                    if campos and escolha_nova != "TOKEN_EXPIRED":
+                        linha.update(campos)
+                    if (
+                        escolha_nova is not _INALTERADO
+                        and escolha_nova != "TOKEN_EXPIRED"
+                    ):
+                        novas[loja["nome"].lower()] = escolha_nova
+                except Exception:
+                    pass
 
             if novas:
                 for cl, esc in novas.items():
                     escolhas[cl][chave] = esc
                 salvar_escolhas(escolhas)
 
-            # Alabarce — sequencial (driver único), só se houver escolha salva
+            # ── Alabarce — sequencial ────────────────────────────
             for loja in LOJAS:
                 if loja.get("tipo") != "alabarce":
                     continue
                 loja_nome  = loja["nome"]
                 chave_loja = loja_nome.lower()
                 entrada    = escolhas.get(chave_loja, {}).get(chave)
-                if entrada and driver_ala:
-                    res = _processar_alabarce_salvo(entrada, nome, driver_ala)
+                if entrada:
+                    if driver_ala:
+                        res = _processar_alabarce_salvo(entrada, nome, driver_ala)
+                    else:
+                        res = _processar_alabarce_salvo(entrada, nome, None)
                     linha[f"Produto Encontrado ({loja_nome})"] = res["descricao"]
                     linha[f"Preço ({loja_nome})"]              = res["preco"]
                     linha[f"Status ({loja_nome})"]             = res["status"]
@@ -383,12 +359,13 @@ def _fase_buscando(progress_bar, status_text):
             driver_ala.quit()
             st.session_state["busca_driver_ala"] = None
 
-    st.session_state["busca_resultados"] = resultados
-    st.session_state["busca_csv_path"]   = _salvar_csv(resultados)
-    st.session_state["busca_fase"]       = "pronto"
+    st.session_state["busca_resultados"]  = resultados
+    st.session_state["busca_csv_conteudo"] = _gerar_csv(resultados)
+    st.session_state["busca_fase"]         = "pronto"
 
 
-def _salvar_csv(resultados: list) -> str:
+def _gerar_csv(resultados: list) -> str:
+    """Gera conteúdo CSV como string (para download via Streamlit)."""
     campos = ["Produto Buscado"]
     for loja in LOJAS:
         campos.append(f"Produto Encontrado ({loja['nome']})")
@@ -396,25 +373,15 @@ def _salvar_csv(resultados: list) -> str:
         campos.append(f"Preço ({loja['nome']})")
         campos.append(f"Status ({loja['nome']})")
 
-    hoje     = date.today()
-    nome_arq = f"preços_{hoje.day:02d}_{hoje.month:02d}.csv"
-    os.makedirs(_PASTA_RESULTADOS, exist_ok=True)
-    caminho  = os.path.join(_PASTA_RESULTADOS, nome_arq)
-
-    try:
-        with open(caminho, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.DictWriter(f, fieldnames=campos, extrasaction="ignore")
-            writer.writeheader()
-            writer.writerows(resultados)
-        return caminho
-    except PermissionError:
-        alt = nome_arq.replace(".csv", "_novo.csv")
-        caminho_alt = os.path.join(_PASTA_RESULTADOS, alt)
-        with open(caminho_alt, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.DictWriter(f, fieldnames=campos, extrasaction="ignore")
-            writer.writeheader()
-            writer.writerows(resultados)
-        return caminho_alt
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=campos, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(resultados)
+    writer.writerow({})
+    writer.writerow({
+        "Produto Buscado": f"Busca gerada em: {date.today().strftime('%d/%m/%Y')}"
+    })
+    return output.getvalue()
 
 
 # ─────────────────────────────────────────────────────────────
@@ -456,8 +423,8 @@ def main():
     # ── Capturando tokens ──────────────────────────────────────
     elif fase == "capturando":
         with st.spinner(
-            "Abrindo o navegador e capturando tokens das lojas… "
-            "(isso leva alguns segundos)"
+            "Capturando tokens das lojas… "
+            "(isso pode levar alguns segundos)"
         ):
             try:
                 _fase_capturando()
@@ -496,24 +463,22 @@ def main():
 
     # ── Pronto ─────────────────────────────────────────────────
     elif fase == "pronto":
-        resultados = st.session_state["busca_resultados"]
-        csv_path   = st.session_state.get("busca_csv_path", "")
+        resultados   = st.session_state["busca_resultados"]
+        csv_conteudo = st.session_state.get("busca_csv_conteudo", "")
 
         st.success(f"✅ Busca concluída! **{len(resultados)}** produto(s) processado(s).")
-        if csv_path:
-            st.caption(f"💾 Salvo em: `{csv_path}`")
 
         if resultados:
             df = pd.DataFrame(resultados).set_index("Produto Buscado")
             st.dataframe(df, use_container_width=True)
 
             # Botão de download
-            buf = io.StringIO()
-            df.to_csv(buf, encoding="utf-8-sig")
+            hoje = date.today()
+            nome_arquivo = f"precos_{hoje.day:02d}_{hoje.month:02d}.csv"
             st.download_button(
                 label="⬇️ Baixar CSV",
-                data=buf.getvalue().encode("utf-8-sig"),
-                file_name=os.path.basename(csv_path) if csv_path else "precos.csv",
+                data=csv_conteudo.encode("utf-8-sig"),
+                file_name=nome_arquivo,
                 mime="text/csv",
             )
 
@@ -521,7 +486,8 @@ def main():
             for k in [
                 "busca_fase", "busca_produtos", "busca_dados_lojas",
                 "busca_driver_ala", "busca_escolhas", "busca_pendentes",
-                "busca_idx", "busca_cand_sel", "busca_resultados", "busca_csv_path",
+                "busca_idx", "busca_cand_sel", "busca_resultados",
+                "busca_csv_conteudo",
             ]:
                 st.session_state.pop(k, None)
             st.rerun()

@@ -1,34 +1,38 @@
 """
 =============================================================
   Busca de Preços — VipCommerce (multi-loja) + Alabarce
-  Versão 2.0 — Otimizado para Streamlit Cloud
+  Versão 2.0 — Módulo de lógica (sem Streamlit)
 =============================================================
 
-MUDANÇAS EM RELAÇÃO À VERSÃO ANTERIOR:
-  - Token JWT capturado via cookie (sem browser quando possível)
-  - Processamento sequencial (sem ThreadPoolExecutor para browsers)
-  - Interface via Streamlit (não depende de terminal)
-  - Caminhos relativos (funciona em Linux e Windows)
+Otimizado para Streamlit Cloud:
+  - Token JWT capturado via cookie 'vip-token' (requests puro)
+  - Fallback Playwright com espera inteligente (sem timeout fixo)
   - Alabarce via requests + BeautifulSoup (sem Playwright quando possível)
-  - Uso mínimo de RAM (~200MB máx vs ~1.2GB antes)
+  - Processamento sequencial — uso mínimo de RAM
+  - Caminhos relativos — funciona em Linux e Windows
 """
 
 import csv
 import json
 import os
-import io
-import re
-import time
+import sys
 import uuid
 import logging
 import unicodedata
-from datetime import date, datetime
+from datetime import date
 
 import requests as req
-import streamlit as st
+
+# Garante saída UTF-8 (suporte a emojis no terminal/Windows)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
 # ─────────────────────────────────────────────────────────────
-#  CONFIGURAÇÃO DE LOGGING
+#  LOGGING
 # ─────────────────────────────────────────────────────────────
 
 logging.basicConfig(
@@ -43,7 +47,7 @@ log = logging.getLogger("buscar_precos")
 # ─────────────────────────────────────────────────────────────
 
 _DIR = os.path.dirname(os.path.abspath(__file__))
-ARQUIVO_ENTRADA = os.path.join(_DIR, "produtos.csv")
+ARQUIVO_ENTRADA  = os.path.join(_DIR, "produtos.csv")
 ARQUIVO_ESCOLHAS = os.path.join(_DIR, "escolhas.json")
 PASTA_RESULTADOS = os.path.join(_DIR, "dados", "precos")
 
@@ -53,34 +57,45 @@ PASTA_RESULTADOS = os.path.join(_DIR, "dados", "precos")
 
 LOJAS = [
     {
-        "nome": "Semar",
-        "url": "https://www.semarentrega.com.br",
+        "nome":    "Semar",
+        "url":     "https://www.semarentrega.com.br",
         "dominio": "semarentrega.com.br",
-        "tipo": "vipcommerce",
+        "tipo":    "vipcommerce",
     },
     {
-        "nome": "Rossi",
-        "url": "https://www.rossidelivery.com.br",
+        "nome":    "Rossi",
+        "url":     "https://www.rossidelivery.com.br",
         "dominio": "rossidelivery.com.br",
-        "tipo": "vipcommerce",
+        "tipo":    "vipcommerce",
     },
     {
-        "nome": "Shibata",
-        "url": "https://www.loja.shibata.com.br",
+        "nome":    "Shibata",
+        "url":     "https://www.loja.shibata.com.br",
         "dominio": "loja.shibata.com.br",
-        "tipo": "vipcommerce",
+        "tipo":    "vipcommerce",
     },
     {
-        "nome": "Alabarce",
-        "url": "https://alabarce.net.br",
-        "tipo": "alabarce",
+        "nome":    "Alabarce",
+        "url":     "https://alabarce.net.br",
+        "tipo":    "alabarce",
     },
 ]
 
 LOJAS_CONHECIDAS = {"semar", "rossi", "shibata", "alabarce"}
 DELAY_ENTRE_BUSCAS = 0.3
 
-# Headers padrão para simular navegador real
+# ─────────────────────────────────────────────────────────────
+#  COMPATIBILIDADE — nomes usados pela página Streamlit
+# ─────────────────────────────────────────────────────────────
+
+MAX_WORKERS_TOKENS = 1   # sequencial (antes era 4)
+MAX_WORKERS_LOJAS  = 1   # sequencial (antes era 4)
+_INALTERADO = object()   # sentinel: escolha veio do cache
+
+# ─────────────────────────────────────────────────────────────
+#  HEADERS COMUNS
+# ─────────────────────────────────────────────────────────────
+
 _HEADERS_NAVEGADOR = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -94,54 +109,41 @@ _HEADERS_NAVEGADOR = {
 
 # =============================================================
 #  1. CAPTURA DE TOKEN — VipCommerce
-#     Estratégia: requests (cookie) → Playwright (fallback)
 # =============================================================
 
-def _capturar_token_via_requests(loja: dict) -> dict | None:
+def _capturar_token_via_requests(loja: dict) -> str | None:
     """
-    Tenta obter o token JWT acessando o site via requests.
-    O VipCommerce armazena o token no cookie 'vip-token'.
-    Retorna dict com token ou None se falhar.
+    Acessa o site da loja via requests e lê o cookie 'vip-token'.
+    Retorna o JWT ou None.
     """
     try:
         session = req.Session()
         session.headers.update(_HEADERS_NAVEGADOR)
-
         resp = session.get(loja["url"], timeout=20, allow_redirects=True)
         resp.raise_for_status()
 
-        # Procura o cookie vip-token
-        token = session.cookies.get("vip-token")
+        for cookie in session.cookies:
+            if cookie.name == "vip-token" and cookie.value and len(cookie.value) > 20:
+                log.info(f"{loja['nome']}: token via cookie (sem browser)")
+                return cookie.value
 
-        if not token:
-            # Tenta em todos os cookies (pode estar em domínio diferente)
-            for cookie in session.cookies:
-                if cookie.name == "vip-token" and cookie.value:
-                    token = cookie.value
-                    break
-
-        if not token or len(token) < 20:
-            log.info(f"{loja['nome']}: cookie vip-token não encontrado via requests")
-            return None
-
-        log.info(f"{loja['nome']}: token capturado via cookie (requests)")
-        return {"token": token}
+        log.info(f"{loja['nome']}: cookie vip-token não encontrado via requests")
+        return None
 
     except Exception as e:
-        log.warning(f"{loja['nome']}: falha ao capturar token via requests: {e}")
+        log.warning(f"{loja['nome']}: falha requests: {e}")
         return None
 
 
 def _capturar_token_via_playwright(loja: dict) -> dict | None:
     """
-    Fallback: abre Playwright, aguarda a primeira requisição ao
-    VipCommerce e captura token + sessao_id + session + IDs.
-    Usa wait_for_event com predicado — muito mais confiável que timeout fixo.
+    Fallback: Playwright intercepta a primeira requisição VipCommerce
+    que contenha um token JWT válido.
     """
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        log.error("Playwright não instalado. Execute: pip install playwright && playwright install chromium")
+        log.error("Playwright não disponível")
         return None
 
     resultado = {
@@ -153,53 +155,57 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu",
-                      "--single-process", "--disable-extensions"],
+                args=[
+                    "--no-sandbox", "--disable-dev-shm-usage",
+                    "--disable-gpu", "--single-process",
+                    "--disable-extensions",
+                ],
             )
-            context = browser.new_context(user_agent=_HEADERS_NAVEGADOR["User-Agent"])
+            context = browser.new_context(
+                user_agent=_HEADERS_NAVEGADOR["User-Agent"]
+            )
             page = context.new_page()
+            page.set_default_timeout(30_000)
 
-            dados_capturados = {"encontrou": False}
+            encontrou = {"ok": False}
 
             def interceptar(request):
-                if dados_capturados["encontrou"]:
+                if encontrou["ok"] or "vipcommerce" not in request.url:
                     return
-                if "vipcommerce" not in request.url:
-                    return
-
                 headers = request.headers
                 auth = headers.get("authorization", "")
                 token_valor = auth.replace("Bearer", "").replace("bearer", "").strip()
 
-                if token_valor and len(token_valor) > 20:
-                    resultado["token"] = token_valor
-                    resultado["sessao_id"] = headers.get("sessao-id", "").strip()
+                if not token_valor or len(token_valor) < 20:
+                    return
 
-                    url = request.url
-                    if "session=" in url:
-                        resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
+                resultado["token"]     = token_valor
+                resultado["sessao_id"] = headers.get("sessao-id", "").strip()
 
-                    if "/org/" in url and "/centro_distribuicao/" in url:
-                        partes = url.split("/")
-                        try:
-                            resultado["org_id"] = partes[partes.index("org") + 1]
-                            resultado["filial_id"] = partes[partes.index("filial") + 1]
-                            resultado["cd_id"] = partes[partes.index("centro_distribuicao") + 1]
-                        except (ValueError, IndexError):
-                            pass
+                url = request.url
+                if "session=" in url:
+                    resultado["session"] = url.split("session=")[-1].split("&")[0].strip()
+                if "/org/" in url and "/centro_distribuicao/" in url:
+                    partes = url.split("/")
+                    try:
+                        resultado["org_id"]    = partes[partes.index("org") + 1]
+                        resultado["filial_id"] = partes[partes.index("filial") + 1]
+                        resultado["cd_id"]     = partes[partes.index("centro_distribuicao") + 1]
+                    except (ValueError, IndexError):
+                        pass
 
-                    dados_capturados["encontrou"] = True
+                encontrou["ok"] = True
 
             page.on("request", interceptar)
-            page.goto(loja["url"], wait_until="domcontentloaded", timeout=30000)
+            page.goto(loja["url"], wait_until="domcontentloaded", timeout=30_000)
 
-            # Aguarda até 20s pelo token (muito melhor que os 5s fixos do código antigo)
+            # Espera até 20s pelo token
             for _ in range(40):
-                if dados_capturados["encontrou"]:
+                if encontrou["ok"]:
                     break
                 page.wait_for_timeout(500)
 
-            # Se pegou o token mas não os IDs, tenta digitar algo para forçar
+            # Se pegou token mas não cd_id, digita algo para forçar
             if resultado["token"] and not resultado["cd_id"]:
                 try:
                     campo = page.locator(
@@ -208,32 +214,36 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                     ).first
                     campo.click()
                     campo.type("arroz")
-                    for _ in range(16):  # mais 8s
+                    for _ in range(16):
                         if resultado["cd_id"]:
                             break
                         page.wait_for_timeout(500)
                 except Exception:
                     pass
 
+            # Tenta ler vip-token dos cookies do browser
+            if not resultado["token"]:
+                cookies = context.cookies()
+                for c in cookies:
+                    if c["name"] == "vip-token" and c["value"] and len(c["value"]) > 20:
+                        resultado["token"] = c["value"]
+                        break
+
             browser.close()
 
         if resultado["token"]:
-            log.info(f"{loja['nome']}: token capturado via Playwright")
+            log.info(f"{loja['nome']}: token via Playwright")
             return resultado
-        else:
-            log.warning(f"{loja['nome']}: Playwright não encontrou token")
-            return None
+        log.warning(f"{loja['nome']}: Playwright não encontrou token")
+        return None
 
     except Exception as e:
-        log.error(f"{loja['nome']}: erro no Playwright: {e}")
+        log.error(f"{loja['nome']}: erro Playwright: {e}")
         return None
 
 
 def _obter_dados_filial(token: str, dominio: str) -> dict | None:
-    """
-    Chama o endpoint de filial para obter org_id e filial_id.
-    GET /organizacoes/filiais/dominio/{dominio}
-    """
+    """GET /organizacoes/filiais/dominio/{dominio} → org_id, filial_id."""
     url = f"https://services.vipcommerce.com.br/organizacoes/filiais/dominio/{dominio}"
     headers = {
         **_HEADERS_NAVEGADOR,
@@ -245,21 +255,18 @@ def _obter_dados_filial(token: str, dominio: str) -> dict | None:
         resp = req.get(url, headers=headers, timeout=15)
         resp.raise_for_status()
         data = resp.json().get("data", {})
-        org = data.get("organizacao", {})
+        org  = data.get("organizacao", {})
         return {
             "filial_id": str(data.get("id", "")),
-            "org_id": str(org.get("id", "")),
+            "org_id":    str(org.get("id", "")),
         }
     except Exception as e:
-        log.warning(f"Erro ao obter dados da filial ({dominio}): {e}")
+        log.warning(f"Erro filial ({dominio}): {e}")
         return None
 
 
 def _obter_cd_id(token: str, org_id: str, filial_id: str, dominio: str) -> str | None:
-    """
-    Tenta descobrir o cd_id (centro de distribuição) via API.
-    Testa endpoints comuns do VipCommerce.
-    """
+    """Tenta descobrir o cd_id via endpoints conhecidos."""
     base = "https://services.vipcommerce.com.br"
     headers = {
         **_HEADERS_NAVEGADOR,
@@ -269,8 +276,6 @@ def _obter_cd_id(token: str, org_id: str, filial_id: str, dominio: str) -> str |
         "organizationid": org_id,
         "filialid": filial_id,
     }
-
-    # Tentativa 1: endpoint de centros de distribuição
     endpoints = [
         f"{base}/api-admin/v1/org/{org_id}/filial/{filial_id}/centros_distribuicao",
         f"{base}/api-admin/v1/org/{org_id}/filial/{filial_id}/centro_distribuicao",
@@ -279,90 +284,83 @@ def _obter_cd_id(token: str, org_id: str, filial_id: str, dominio: str) -> str |
     for url in endpoints:
         try:
             resp = req.get(url, headers=headers, timeout=10)
-            if resp.status_code == 200:
-                data = resp.json()
-                # Tenta extrair o primeiro cd_id
-                if isinstance(data, dict) and "data" in data:
-                    items = data["data"]
-                    if isinstance(items, list) and items:
-                        return str(items[0].get("id", ""))
-                    elif isinstance(items, dict):
-                        return str(items.get("id", ""))
-                elif isinstance(data, list) and data:
-                    return str(data[0].get("id", ""))
+            if resp.status_code != 200:
+                continue
+            data = resp.json()
+            if isinstance(data, dict) and "data" in data:
+                items = data["data"]
+                if isinstance(items, list) and items:
+                    return str(items[0].get("id", ""))
+                if isinstance(items, dict):
+                    return str(items.get("id", ""))
+            elif isinstance(data, list) and data:
+                return str(data[0].get("id", ""))
         except Exception:
             continue
-
     return None
 
 
-def capturar_dados_loja(loja: dict) -> dict | None:
+def capturar_dados_loja(loja: dict) -> dict:
     """
-    Captura todos os dados necessários para acessar a API de uma loja VipCommerce.
-    Estratégia em cascata:
-      1. Token via cookie (requests) → dados via API
-      2. Tudo via Playwright (fallback)
+    Captura token + IDs para uma loja VipCommerce.
+    Estratégia: cookie requests → Playwright fallback.
 
-    Retorna dict com: token, sessao_id, session, org_id, filial_id, cd_id
-    Ou None se falhar completamente.
+    Retorna dict com token, sessao_id, session, org_id, filial_id, cd_id.
+    Campos podem ser None se não capturados.
     """
     resultado = {
         "token": None, "sessao_id": None, "session": None,
         "org_id": None, "filial_id": None, "cd_id": None,
     }
 
-    # ── Estratégia 1: requests puro ─────────────────────────
-    dados_cookie = _capturar_token_via_requests(loja)
-    if dados_cookie and dados_cookie.get("token"):
-        resultado["token"] = dados_cookie["token"]
-
-        # Gera um sessao_id (UUID) — funciona para sessões anônimas
+    # ── Estratégia 1: cookie via requests ────────────────────
+    token = _capturar_token_via_requests(loja)
+    if token:
+        resultado["token"]     = token
         resultado["sessao_id"] = str(uuid.uuid4())
-        resultado["session"] = str(uuid.uuid4())
+        resultado["session"]   = str(uuid.uuid4())
 
-        # Busca org_id e filial_id via API
-        dados_filial = _obter_dados_filial(resultado["token"], loja["dominio"])
+        dados_filial = _obter_dados_filial(token, loja["dominio"])
         if dados_filial:
-            resultado["org_id"] = dados_filial["org_id"]
+            resultado["org_id"]    = dados_filial["org_id"]
             resultado["filial_id"] = dados_filial["filial_id"]
 
-            # Busca cd_id
-            cd_id = _obter_cd_id(
-                resultado["token"], resultado["org_id"],
-                resultado["filial_id"], loja["dominio"]
-            )
+            cd_id = _obter_cd_id(token, dados_filial["org_id"],
+                                 dados_filial["filial_id"], loja["dominio"])
             if cd_id:
                 resultado["cd_id"] = cd_id
-                log.info(f"{loja['nome']}: dados completos via requests (sem browser!)")
+                log.info(f"{loja['nome']}: completo via requests (sem browser)")
                 return resultado
 
-    # ── Estratégia 2: Playwright (fallback) ──────────────────
-    log.info(f"{loja['nome']}: tentando via Playwright (fallback)...")
+    # ── Estratégia 2: Playwright fallback ────────────────────
+    log.info(f"{loja['nome']}: tentando Playwright...")
     dados_pw = _capturar_token_via_playwright(loja)
-    if dados_pw and dados_pw.get("token"):
-        # Mescla: dados do Playwright preenchem o que falta
+    if dados_pw:
         for chave in resultado:
             if not resultado[chave] and dados_pw.get(chave):
                 resultado[chave] = dados_pw[chave]
 
-        # Se ainda não tem org/filial, tenta via API com o token do Playwright
         if not resultado["org_id"] and resultado["token"]:
             dados_filial = _obter_dados_filial(resultado["token"], loja["dominio"])
             if dados_filial:
-                resultado["org_id"] = dados_filial["org_id"]
+                resultado["org_id"]    = dados_filial["org_id"]
                 resultado["filial_id"] = dados_filial["filial_id"]
+                if not resultado["cd_id"]:
+                    cd_id = _obter_cd_id(resultado["token"], dados_filial["org_id"],
+                                         dados_filial["filial_id"], loja["dominio"])
+                    if cd_id:
+                        resultado["cd_id"] = cd_id
 
-        if resultado["token"] and resultado["org_id"]:
-            log.info(f"{loja['nome']}: dados capturados via Playwright")
-            return resultado
+    if resultado["token"]:
+        log.info(f"{loja['nome']}: org={resultado.get('org_id')} cd={resultado.get('cd_id')}")
+    else:
+        log.error(f"{loja['nome']}: falha total na captura")
 
-    log.error(f"{loja['nome']}: falha total na captura de dados")
-    return None
+    return resultado
 
 
 # =============================================================
-#  2. FUNÇÕES DE API — VipCommerce
-#     (preservadas do código original — já funcionavam)
+#  2. FUNÇÕES DE API — VipCommerce (preservadas)
 # =============================================================
 
 def normalizar(texto: str) -> str:
@@ -374,24 +372,20 @@ def normalizar(texto: str) -> str:
 
 
 def montar_headers(loja: dict, dados: dict) -> dict:
-    """Monta headers para chamadas à API VipCommerce."""
     return {
-        "Authorization": f"Bearer {dados['token']}",
-        "domainkey": loja["dominio"],
+        "Authorization":  f"Bearer {dados['token']}",
+        "domainkey":      loja["dominio"],
         "organizationid": dados["org_id"],
-        "filialid": dados["filial_id"],
-        "sessao-id": dados.get("sessao_id", ""),
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "User-Agent": _HEADERS_NAVEGADOR["User-Agent"],
+        "filialid":       dados["filial_id"],
+        "sessao-id":      dados.get("sessao_id", ""),
+        "Content-Type":   "application/json",
+        "Accept":         "application/json",
+        "User-Agent":     _HEADERS_NAVEGADOR["User-Agent"],
     }
 
 
 def buscar_produto(termo: str, loja: dict, dados: dict) -> list | None:
-    """
-    Busca produtos na API VipCommerce.
-    Retorna lista de produtos, lista vazia, ou None (token expirado).
-    """
+    """Busca na API VipCommerce. Retorna lista, [] ou None (token expirado)."""
     base = "https://services.vipcommerce.com.br/api-admin/v1"
     url = (
         f"{base}/org/{dados['org_id']}/filial/{dados['filial_id']}"
@@ -402,7 +396,7 @@ def buscar_produto(termo: str, loja: dict, dados: dict) -> list | None:
     try:
         r = req.get(url, headers=montar_headers(loja, dados), timeout=15)
         if r.status_code == 401:
-            return None  # token expirado
+            return None
         if r.status_code != 200:
             log.warning(f"Status {r.status_code} para '{termo}' em {loja['nome']}")
             return []
@@ -418,12 +412,11 @@ def buscar_produto(termo: str, loja: dict, dados: dict) -> list | None:
                     return d[chave]
         return d if isinstance(d, list) else []
     except Exception as e:
-        log.error(f"Erro na busca '{termo}' em {loja['nome']}: {e}")
+        log.error(f"Erro busca '{termo}' em {loja['nome']}: {e}")
         return []
 
 
 def buscar_detalhes(produto_id, loja: dict, dados: dict) -> dict | None:
-    """Busca detalhes de um produto específico."""
     base = "https://services.vipcommerce.com.br/api-admin/v1"
     url = (
         f"{base}/org/{dados['org_id']}/filial/{dados['filial_id']}"
@@ -436,14 +429,14 @@ def buscar_detalhes(produto_id, loja: dict, dados: dict) -> dict | None:
         d = r.json()
         return d.get("data", d) if isinstance(d, dict) else d
     except Exception as e:
-        log.error(f"Erro nos detalhes {produto_id} em {loja['nome']}: {e}")
+        log.error(f"Erro detalhes {produto_id} em {loja['nome']}: {e}")
         return None
 
 
 def extrair_preco(p: dict) -> str | None:
-    """Extrai preço do produto, considerando oferta e preço por kg."""
+    """Extrai preço (oferta / normal / por kg)."""
     em_oferta = p.get("em_oferta", False)
-    oferta = p.get("oferta") or {}
+    oferta    = p.get("oferta") or {}
 
     if em_oferta and oferta.get("preco_oferta"):
         preco_base = float(oferta["preco_oferta"])
@@ -464,18 +457,16 @@ def extrair_preco(p: dict) -> str | None:
 
 
 # =============================================================
-#  3. LÓGICA DE MATCH (preservada — já funcionava)
+#  3. LÓGICA DE MATCH (preservada)
 # =============================================================
 
 def encontrar_candidatos(termo: str, lista_produtos: list) -> list:
-    """Filtra e ordena candidatos relevantes para o termo buscado."""
     IGNORAR = {"de", "da", "do", "das", "dos", "com", "em"}
     EXCLUIR = {
         "polpa", "semente", "swift", "suco", "refresco", "refrigerante",
         "bolo", "biscoito", "creme", "granola", "azeitona", "congelado",
         "congelada", "feltrin", "desidratado", "desidratada",
     }
-
     palavras = [p for p in normalizar(termo).split() if len(p) > 2 and p not in IGNORAR]
     if not palavras:
         return []
@@ -500,46 +491,40 @@ def encontrar_candidatos(termo: str, lista_produtos: list) -> list:
 
 def processar_match(nome: str, produto: dict, loja: dict, dados: dict,
                     lista_produtos: list | None = None) -> dict:
-    """Processa o match de um produto e retorna descricao, preco e status."""
     produto_id = produto.get("produto_id") or produto.get("id")
-    descricao = produto.get("descricao") or produto.get("nome", "")
+    descricao  = produto.get("descricao") or produto.get("nome", "")
     disponivel = produto.get("disponivel", True)
-
     preco = extrair_preco(produto)
 
     if preco is None and lista_produtos is not None:
-        item_lista = next(
+        item = next(
             (p for p in lista_produtos if p.get("produto_id") == produto.get("produto_id")),
             None,
         )
-        if item_lista:
-            preco = extrair_preco(item_lista)
+        if item:
+            preco = extrair_preco(item)
 
     if preco is None and produto_id:
         detalhes = buscar_detalhes(produto_id, loja, dados)
         if detalhes:
-            preco = extrair_preco(detalhes) or preco
+            preco      = extrair_preco(detalhes) or preco
             disponivel = detalhes.get("disponivel", disponivel)
 
-    status = "OK" if disponivel else "Indisponível"
+    status      = "OK" if disponivel else "Indisponível"
     preco_final = preco if disponivel else ""
-
     return {"descricao": descricao, "preco": preco_final, "status": status}
 
 
 # =============================================================
-#  4. ALABARCE — requests + BeautifulSoup (sem Playwright)
+#  4. ALABARCE — requests + BS4 (Playwright fallback)
 # =============================================================
 
 def _buscar_alabarce_requests(termo: str) -> list:
-    """
-    Busca produtos no Alabarce usando requests + BeautifulSoup.
-    Sem precisar de browser. Muito mais leve em RAM.
-    """
+    """Busca no Alabarce via requests + BeautifulSoup."""
     try:
         from bs4 import BeautifulSoup
     except ImportError:
-        log.warning("BeautifulSoup não instalado. Execute: pip install beautifulsoup4")
+        log.warning("BeautifulSoup não instalado")
         return []
 
     url = f"https://alabarce.net.br/products?utf8=%E2%9C%93&keywords={req.utils.quote(termo)}"
@@ -550,12 +535,10 @@ def _buscar_alabarce_requests(termo: str) -> list:
 
         cards = soup.select(".product-cards .product")
         if not cards:
-            # Tenta seletores alternativos
             cards = soup.select("[class*='product']")
 
         produtos = []
         for card in cards:
-            # Nome
             el_nome = card.select_one("h5.product-title") or card.select_one("[class*='title']")
             if not el_nome:
                 continue
@@ -563,15 +546,12 @@ def _buscar_alabarce_requests(termo: str) -> list:
             if not nome:
                 continue
 
-            # Preço
             preco_num = None
             el_preco = card.select_one(".price-amount span") or card.select_one("[class*='price'] span")
             if el_preco:
-                preco_str = el_preco.get_text(strip=True)
                 preco_clean = (
-                    preco_str
-                    .replace("R$", "").replace("R$ ", "")
-                    .replace("\xa0", "").strip()
+                    el_preco.get_text(strip=True)
+                    .replace("R$", "").replace("\xa0", "").strip()
                     .replace(".", "").replace(",", ".")
                 )
                 try:
@@ -584,137 +564,204 @@ def _buscar_alabarce_requests(termo: str) -> list:
                 "preco": f"{preco_num:.2f}" if preco_num else "",
                 "disponivel": True,
             })
-
         return produtos
-
     except Exception as e:
-        log.error(f"Erro na busca Alabarce (requests) '{termo}': {e}")
+        log.error(f"Erro Alabarce requests '{termo}': {e}")
         return []
 
 
-def _buscar_alabarce_playwright(termo: str) -> list:
-    """
-    Fallback: busca no Alabarce via Playwright (se o site precisar de JS).
-    Usa um browser único, sem manter instância aberta.
-    """
+def _dispensar_popup_loja_alabarce(page):
+    """Fecha o popup de seleção de loja do Alabarce."""
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        return []
-
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu",
-                      "--single-process"],
-            )
-            page = browser.new_page()
-
-            url = f"https://alabarce.net.br/products?utf8=%E2%9C%93&keywords={req.utils.quote(termo)}"
-            page.goto(url, wait_until="domcontentloaded")
-
-            # Fecha popup de loja se aparecer
+        modal = page.locator("#stock-picker")
+        if modal.count() == 0 or not modal.is_visible():
+            return
+        btn = modal.locator("a[href*='current_stock'][href*='withdrawal']")
+        if btn.count() > 0:
+            btn.first.click()
             try:
-                modal = page.locator("#stock-picker")
-                if modal.count() > 0 and modal.is_visible():
-                    btn = modal.locator("a[href*='current_stock'][href*='withdrawal']")
-                    if btn.count() > 0:
-                        btn.first.click()
-                        page.locator("#stock-picker").wait_for(state="hidden", timeout=5000)
+                page.locator("#stock-picker").wait_for(state="hidden", timeout=5000)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def _buscar_alabarce_com_page(termo: str, page) -> list:
+    """Busca usando uma page Playwright já aberta."""
+    try:
+        url = f"https://alabarce.net.br/products?utf8=%E2%9C%93&keywords={req.utils.quote(termo)}"
+        page.goto(url, wait_until="domcontentloaded")
+        _dispensar_popup_loja_alabarce(page)
+
+        try:
+            page.locator(".product-cards .product").first.wait_for(timeout=8000)
+            page.wait_for_timeout(500)
+        except Exception:
+            return []
+
+        cards = page.locator(".product-cards .product").all()
+        produtos = []
+        for card in cards:
+            try:
+                el_nome = card.locator("h5.product-title")
+                if el_nome.count() == 0:
+                    continue
+                nome = el_nome.first.inner_text().strip().upper()
+            except Exception:
+                continue
+            if not nome:
+                continue
+
+            preco_num = None
+            try:
+                el_preco = card.locator(".price-amount span")
+                if el_preco.count() > 0:
+                    preco_clean = (
+                        el_preco.first.inner_text()
+                        .replace("R$", "").replace("\xa0", "").strip()
+                        .replace(".", "").replace(",", ".")
+                    )
+                    preco_num = float(preco_clean)
             except Exception:
                 pass
 
-            # Aguarda cards
-            try:
-                page.locator(".product-cards .product").first.wait_for(timeout=8000)
-                page.wait_for_timeout(500)
-            except Exception:
-                browser.close()
-                return []
-
-            cards = page.locator(".product-cards .product").all()
-            produtos = []
-
-            for card in cards:
-                try:
-                    el_nome = card.locator("h5.product-title")
-                    if el_nome.count() == 0:
-                        continue
-                    nome = el_nome.first.inner_text().strip().upper()
-                except Exception:
-                    continue
-
-                if not nome:
-                    continue
-
-                preco_num = None
-                try:
-                    el_preco = card.locator(".price-amount span")
-                    if el_preco.count() > 0:
-                        preco_str = el_preco.first.inner_text()
-                        preco_clean = (
-                            preco_str
-                            .replace("R$", "").replace("R$ ", "")
-                            .replace("\xa0", "").strip()
-                            .replace(".", "").replace(",", ".")
-                        )
-                        preco_num = float(preco_clean)
-                except Exception:
-                    pass
-
-                produtos.append({
-                    "descricao": nome,
-                    "preco": f"{preco_num:.2f}" if preco_num else "",
-                    "disponivel": True,
-                })
-
-            browser.close()
-            return produtos
-
+            produtos.append({
+                "descricao": nome,
+                "preco": f"{preco_num:.2f}" if preco_num else "",
+                "disponivel": True,
+            })
+        return produtos
     except Exception as e:
-        log.error(f"Erro na busca Alabarce (Playwright) '{termo}': {e}")
+        log.error(f"Erro Alabarce page '{termo}': {e}")
         return []
 
 
-def buscar_produto_alabarce(termo: str) -> list:
+def buscar_produto_alabarce(termo: str, driver=None) -> list:
     """
-    Busca no Alabarce com fallback automático.
-    Tenta requests primeiro, Playwright se necessário.
+    Busca no Alabarce.
+    - Se driver fornecido (Playwright): usa ele (compat legado)
+    - Senão: tenta requests, fallback Playwright efêmero
     """
-    # Tenta via requests (sem browser)
+    if driver is not None:
+        page = getattr(driver, "page", driver)
+        return _buscar_alabarce_com_page(termo, page)
+
+    # Tenta requests primeiro
     produtos = _buscar_alabarce_requests(termo)
     if produtos:
         return produtos
 
-    # Fallback: Playwright
-    log.info(f"Alabarce: '{termo}' sem resultados via requests, tentando Playwright...")
-    return _buscar_alabarce_playwright(termo)
+    # Fallback: Playwright efêmero
+    log.info(f"Alabarce: '{termo}' fallback Playwright...")
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage",
+                      "--disable-gpu", "--single-process"],
+            )
+            page = browser.new_page()
+            resultado = _buscar_alabarce_com_page(termo, page)
+            browser.close()
+            return resultado
+    except Exception as e:
+        log.error(f"Erro Alabarce Playwright '{termo}': {e}")
+        return []
+
+
+# ── Compat legado: driver reutilizável ───────────────────────
+
+class _PlaywrightContext:
+    """Contexto Playwright reutilizável."""
+
+    def __init__(self):
+        from playwright.sync_api import sync_playwright
+        self._pw = sync_playwright().start()
+        self.browser = self._pw.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage",
+                  "--disable-gpu", "--single-process"],
+        )
+        self.page = self.browser.new_page()
+        self.page.set_default_timeout(30_000)
+
+    def quit(self):
+        try:
+            self.browser.close()
+        except Exception:
+            pass
+        try:
+            self._pw.stop()
+        except Exception:
+            pass
+
+
+def _criar_driver_alabarce():
+    """Cria driver Playwright reutilizável para o Alabarce."""
+    try:
+        ctx = _PlaywrightContext()
+        try:
+            ctx.page.goto("https://alabarce.net.br", wait_until="domcontentloaded")
+            ctx.page.wait_for_timeout(2000)
+            _dispensar_popup_loja_alabarce(ctx.page)
+        except Exception:
+            pass
+        return ctx
+    except Exception as e:
+        log.error(f"Erro ao criar driver Alabarce: {e}")
+        return None
+
+
+def _processar_alabarce_salvo(entrada: dict, nome: str, driver) -> dict:
+    """Re-busca produto Alabarce já salvo para obter preço atualizado."""
+    desc_salva = normalizar(entrada.get("descricao", ""))
+
+    if driver is not None:
+        lista_atual = buscar_produto_alabarce(nome, driver)
+    else:
+        lista_atual = buscar_produto_alabarce(nome)
+
+    match = next(
+        (p for p in lista_atual if normalizar(p.get("descricao", "")) == desc_salva),
+        None,
+    )
+
+    if match:
+        return {
+            "descricao": match["descricao"],
+            "preco":     match["preco"],
+            "status":    "OK" if match["preco"] else "Indisponível",
+        }
+
+    return {
+        "descricao": entrada.get("descricao", ""),
+        "preco":     entrada.get("preco", ""),
+        "status":    "OK" if entrada.get("preco") else "Indisponível",
+    }
 
 
 # =============================================================
-#  5. CACHE DE ESCOLHAS (preservado — já funcionava)
+#  5. CACHE DE ESCOLHAS (preservado)
 # =============================================================
 
 def _slim(entrada) -> dict | None:
-    """Extrai apenas produto_id e descricao de um objeto de produto."""
     if entrada is None:
         return None
     if isinstance(entrada, dict):
         return {
             "produto_id": entrada.get("produto_id"),
-            "descricao": entrada.get("descricao", ""),
+            "descricao":  entrada.get("descricao", ""),
         }
     return entrada
 
 
 def carregar_escolhas() -> dict:
-    """Carrega escolhas salvas do JSON."""
     if os.path.exists(ARQUIVO_ESCOLHAS):
         try:
             with open(ARQUIVO_ESCOLHAS, encoding="utf-8") as f:
                 dados = json.load(f)
-            # Garante formato correto (slim)
             novo = {}
             for loja in LOJAS_CONHECIDAS:
                 if loja in dados and isinstance(dados[loja], dict):
@@ -726,7 +773,6 @@ def carregar_escolhas() -> dict:
 
 
 def salvar_escolhas(escolhas: dict):
-    """Salva escolhas no JSON (formato slim)."""
     dados_slim = {
         loja: {k: _slim(v) for k, v in produtos.items()}
         for loja, produtos in escolhas.items()
@@ -740,116 +786,17 @@ def salvar_escolhas(escolhas: dict):
 
 
 # =============================================================
-#  6. GERAR CSV DE RESULTADOS
+#  6. PROCESSAR LOJA VC (compat com página Streamlit)
 # =============================================================
-
-def gerar_csv(resultados: list) -> str:
-    """
-    Gera conteúdo CSV dos resultados.
-    Retorna string CSV para uso com st.download_button.
-    """
-    campos = ["Produto Buscado"]
-    for loja in LOJAS:
-        campos.append(f"Produto Encontrado ({loja['nome']})")
-    for loja in LOJAS:
-        campos.append(f"Preco ({loja['nome']})")
-        campos.append(f"Status ({loja['nome']})")
-
-    output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=campos, extrasaction="ignore")
-    writer.writeheader()
-    writer.writerows(resultados)
-    writer.writerow({})
-    writer.writerow({"Produto Buscado": f"Busca gerada em: {date.today().strftime('%d/%m/%Y')}"})
-
-    return output.getvalue()
-
-
-def salvar_csv_local(conteudo_csv: str):
-    """Salva CSV localmente (backup)."""
-    try:
-        os.makedirs(PASTA_RESULTADOS, exist_ok=True)
-        hoje = date.today()
-        nome_arquivo = f"precos_{hoje.day:02d}_{hoje.month:02d}.csv"
-        caminho = os.path.join(PASTA_RESULTADOS, nome_arquivo)
-        with open(caminho, "w", newline="", encoding="utf-8-sig") as f:
-            f.write(conteudo_csv)
-        log.info(f"CSV salvo em: {caminho}")
-    except Exception as e:
-        log.warning(f"Erro ao salvar CSV local: {e}")
-
-
-# =============================================================
-#  7. INTERFACE STREAMLIT
-# =============================================================
-
-def _inicializar_estado():
-    """Inicializa session_state do Streamlit."""
-    defaults = {
-        "etapa": "inicio",           # inicio | capturando | buscando | selecao | concluido
-        "dados_lojas": {},            # {nome_loja: dados}
-        "escolhas": {},               # cache de escolhas
-        "resultados": [],             # resultados finais
-        "produtos": [],               # lista de produtos do CSV
-        "produto_atual_idx": 0,       # índice do produto sendo processado
-        "pendente_selecao": None,     # produto aguardando seleção do usuário
-        "csv_conteudo": None,         # CSV gerado
-        "log_mensagens": [],          # log visual
-    }
-    for chave, valor in defaults.items():
-        if chave not in st.session_state:
-            st.session_state[chave] = valor
-
-
-def _log_ui(msg: str):
-    """Adiciona mensagem ao log visual."""
-    st.session_state.log_mensagens.append(f"[{datetime.now().strftime('%H:%M:%S')}] {msg}")
-
-
-def _carregar_produtos():
-    """Carrega a lista de produtos do CSV."""
-    if not os.path.exists(ARQUIVO_ENTRADA):
-        st.error(f"Arquivo '{ARQUIVO_ENTRADA}' não encontrado.")
-        return []
-    try:
-        with open(ARQUIVO_ENTRADA, encoding="utf-8-sig") as f:
-            return [row["Produtos"].strip() for row in csv.DictReader(f) if row.get("Produtos")]
-    except KeyError:
-        st.error("Coluna 'Produtos' não encontrada no CSV.")
-        return []
-
-
-def _etapa_capturar_tokens():
-    """Etapa 1: captura tokens de todas as lojas VipCommerce."""
-    lojas_vc = [l for l in LOJAS if l.get("tipo") == "vipcommerce"]
-    barra = st.progress(0, text="Capturando tokens...")
-
-    for i, loja in enumerate(lojas_vc):
-        barra.progress((i) / len(lojas_vc), text=f"Capturando token: {loja['nome']}...")
-        _log_ui(f"Capturando token: {loja['nome']}...")
-
-        dados = capturar_dados_loja(loja)
-        if dados and dados.get("token"):
-            st.session_state.dados_lojas[loja["nome"]] = dados
-            _log_ui(f"  {loja['nome']}: OK (org={dados.get('org_id')})")
-        else:
-            _log_ui(f"  {loja['nome']}: FALHOU — será ignorada")
-
-    barra.progress(1.0, text="Tokens capturados!")
-
-    if not st.session_state.dados_lojas:
-        st.error("Nenhuma loja VipCommerce respondeu. Verifique a conexão.")
-        st.session_state.etapa = "inicio"
-        return False
-
-    return True
-
 
 def _processar_loja_vc(nome: str, loja: dict, dados: dict,
                        escolhas_loja: dict, chave: str) -> tuple:
     """
-    Processa uma loja VipCommerce para um produto.
-    Retorna (campos_csv, escolha_nova, candidatos_para_selecao).
+    Retorna (campos_csv, escolha_para_salvar):
+      - _INALTERADO = cache hit
+      - None = não encontrado
+      - dict = produto escolhido
+      - "TOKEN_EXPIRED" = token expirado
     """
     loja_nome = loja["nome"]
 
@@ -857,389 +804,98 @@ def _processar_loja_vc(nome: str, loja: dict, dados: dict,
     if chave in escolhas_loja:
         entrada = escolhas_loja[chave]
         if entrada is None:
-            return (
-                {
-                    f"Produto Encontrado ({loja_nome})": "",
-                    f"Preco ({loja_nome})": "",
-                    f"Status ({loja_nome})": "Não encontrado",
-                },
-                None, None
-            )
+            campos = {
+                f"Produto Encontrado ({loja_nome})": "",
+                f"Preço ({loja_nome})":              "",
+                f"Status ({loja_nome})":             "Não encontrado",
+            }
+            return campos, _INALTERADO
 
         lista = buscar_produto(nome, loja, dados) or []
         res = processar_match(nome, entrada, loja, dados, lista_produtos=lista)
-        return (
-            {
-                f"Produto Encontrado ({loja_nome})": res["descricao"],
-                f"Preco ({loja_nome})": res["preco"],
-                f"Status ({loja_nome})": res["status"],
-            },
-            None, None
-        )
+        log.info(f"  [{loja_nome}] {res['descricao']} | R$ {res['preco']} | {res['status']}")
+        campos = {
+            f"Produto Encontrado ({loja_nome})": res["descricao"],
+            f"Preço ({loja_nome})":              res["preco"],
+            f"Status ({loja_nome})":             res["status"],
+        }
+        return campos, _INALTERADO
 
-    # Produto novo: buscar na API
+    # Produto novo
     lista = buscar_produto(nome, loja, dados)
-
     if lista is None:
-        # Token expirado — tenta recapturar
-        _log_ui(f"  {loja_nome}: token expirado, recapturando...")
-        novos_dados = capturar_dados_loja(loja)
-        if novos_dados and novos_dados.get("token"):
-            st.session_state.dados_lojas[loja_nome] = novos_dados
-            lista = buscar_produto(nome, loja, novos_dados) or []
-        else:
-            lista = []
+        return None, "TOKEN_EXPIRED"
 
     if not lista:
-        return (
-            {
-                f"Produto Encontrado ({loja_nome})": "",
-                f"Preco ({loja_nome})": "",
-                f"Status ({loja_nome})": "Não encontrado",
-            },
-            None, None
-        )
+        campos = {
+            f"Produto Encontrado ({loja_nome})": "",
+            f"Preço ({loja_nome})":              "",
+            f"Status ({loja_nome})":             "Não encontrado",
+        }
+        return campos, None
 
     candidatos = encontrar_candidatos(nome, lista)
     if not candidatos:
-        return (
-            {
-                f"Produto Encontrado ({loja_nome})": "",
-                f"Preco ({loja_nome})": "",
-                f"Status ({loja_nome})": "Sem match",
-            },
-            None, None
-        )
+        campos = {
+            f"Produto Encontrado ({loja_nome})": "",
+            f"Preço ({loja_nome})":              "",
+            f"Status ({loja_nome})":             "Sem match",
+        }
+        return campos, None
 
-    # Se só tem 1 candidato, seleciona automaticamente
+    # Auto-seleciona se só 1 candidato
     if len(candidatos) == 1:
         escolhido = candidatos[0]
         res = processar_match(nome, escolhido, loja, dados)
-        return (
-            {
-                f"Produto Encontrado ({loja_nome})": res["descricao"],
-                f"Preco ({loja_nome})": res["preco"],
-                f"Status ({loja_nome})": res["status"],
-            },
-            _slim(escolhido), None
-        )
+        campos = {
+            f"Produto Encontrado ({loja_nome})": res["descricao"],
+            f"Preço ({loja_nome})":              res["preco"],
+            f"Status ({loja_nome})":             res["status"],
+        }
+        return campos, _slim(escolhido)
 
-    # Múltiplos candidatos → precisa da seleção do usuário
-    return (None, None, candidatos)
+    # Sem terminal → auto-seleciona primeiro
+    if not sys.stdin.isatty():
+        escolhido = candidatos[0]
+        res = processar_match(nome, escolhido, loja, dados)
+        log.info(f"  [AUTO] {loja_nome}: {res['descricao']}")
+        campos = {
+            f"Produto Encontrado ({loja_nome})": res["descricao"],
+            f"Preço ({loja_nome})":              res["preco"],
+            f"Status ({loja_nome})":             res["status"],
+        }
+        return campos, _slim(escolhido)
 
-
-def _renderizar_selecao(nome_produto: str, loja_nome: str, candidatos: list) -> dict | None:
-    """Renderiza widget de seleção no Streamlit e retorna o escolhido."""
-    st.subheader(f"Escolha para '{nome_produto}' em {loja_nome}")
-
-    opcoes = ["Nenhum / Pular"]
-    for c in candidatos:
+    # Terminal interativo (fallback)
+    print(f"\n  🔍 '{nome}' em {loja_nome} — escolha:")
+    print("   [0] Nenhum / Pular")
+    for i, c in enumerate(candidatos, 1):
         preco = extrair_preco(c) or c.get("preco", "?")
-        desc = c.get("descricao", "?")
-        opcoes.append(f"{desc} — R$ {preco}")
-
-    escolha_idx = st.selectbox(
-        "Selecione o produto correto:",
-        range(len(opcoes)),
-        format_func=lambda i: opcoes[i],
-        key=f"sel_{normalizar(nome_produto)}_{normalizar(loja_nome)}",
-    )
-
-    if escolha_idx == 0:
-        return None
-    return candidatos[escolha_idx - 1]
-
-
-# =============================================================
-#  8. MAIN — APLICAÇÃO STREAMLIT
-# =============================================================
-
-def main():
-    st.set_page_config(page_title="Busca de Preços — Benverde", page_icon="🛒", layout="wide")
-    st.title("🛒 Busca de Preços")
-    st.caption("VipCommerce + Alabarce — Sistema Benverde")
-
-    _inicializar_estado()
-
-    # ── Sidebar: info e controles ─────────────────────────────
-    with st.sidebar:
-        st.header("Configuração")
-        st.write(f"**Lojas:** {', '.join(l['nome'] for l in LOJAS)}")
-        st.write(f"**Arquivo de produtos:** `produtos.csv`")
-        st.write(f"**Escolhas salvas:** `escolhas.json`")
-
-        if st.button("Limpar cache de escolhas"):
-            if os.path.exists(ARQUIVO_ESCOLHAS):
-                os.remove(ARQUIVO_ESCOLHAS)
-                st.session_state.escolhas = {}
-                st.success("Cache limpo!")
-
-        st.divider()
-        st.subheader("Log")
-        for msg in st.session_state.log_mensagens[-20:]:
-            st.text(msg)
-
-    # ── Tela inicial ──────────────────────────────────────────
-    if st.session_state.etapa == "inicio":
-        produtos = _carregar_produtos()
-        if not produtos:
-            return
-
-        st.session_state.produtos = produtos
-        st.info(f"**{len(produtos)} produto(s)** encontrados no CSV.")
-
-        if st.button("🚀 Iniciar Busca de Preços", type="primary"):
-            st.session_state.escolhas = carregar_escolhas()
-            st.session_state.etapa = "capturando"
-            st.rerun()
-
-    # ── Etapa 1: Capturar tokens ──────────────────────────────
-    elif st.session_state.etapa == "capturando":
-        st.subheader("Etapa 1/2 — Capturando tokens")
-        sucesso = _etapa_capturar_tokens()
-        if sucesso:
-            st.session_state.etapa = "buscando"
-            st.session_state.produto_atual_idx = 0
-            st.session_state.resultados = []
-            st.rerun()
-
-    # ── Etapa 2: Buscar preços ────────────────────────────────
-    elif st.session_state.etapa == "buscando":
-        st.subheader("Etapa 2/2 — Buscando preços")
-        produtos = st.session_state.produtos
-        idx = st.session_state.produto_atual_idx
-        escolhas = st.session_state.escolhas
-
-        barra = st.progress(idx / len(produtos), text=f"Produto {idx}/{len(produtos)}")
-
-        while idx < len(produtos):
-            nome = produtos[idx]
-            chave = normalizar(nome)
-            _log_ui(f"[{idx+1}/{len(produtos)}] {nome}")
-
-            linha = {"Produto Buscado": nome}
-            pendencias_selecao = []  # (loja, candidatos)
-
-            # ── Lojas VipCommerce ──────────────────────────
-            for loja in LOJAS:
-                if loja.get("tipo") != "vipcommerce":
-                    continue
-                if loja["nome"] not in st.session_state.dados_lojas:
-                    continue
-
-                dados = st.session_state.dados_lojas[loja["nome"]]
-                chave_loja = loja["nome"].lower()
-                escolhas.setdefault(chave_loja, {})
-
-                campos, escolha_nova, candidatos = _processar_loja_vc(
-                    nome, loja, dados, escolhas[chave_loja], chave
-                )
-
-                if candidatos:
-                    # Precisa de seleção do usuário
-                    pendencias_selecao.append((loja, candidatos))
-                elif campos:
-                    linha.update(campos)
-                    if escolha_nova is not None:
-                        escolhas[chave_loja][chave] = _slim(escolha_nova)
-                        salvar_escolhas(escolhas)
-                        _log_ui(f"  [{loja['nome']}] Salvo automaticamente")
-
-            # Se tem pendências de seleção, pausa para o usuário escolher
-            if pendencias_selecao:
-                st.session_state.produto_atual_idx = idx
-                st.session_state.pendente_selecao = {
-                    "nome": nome,
-                    "chave": chave,
-                    "linha": linha,
-                    "pendencias": pendencias_selecao,
+        print(f"   [{i}] {c.get('descricao','?')}  R$ {preco}")
+    while True:
+        try:
+            n = int(input("  👉 Número: ").strip())
+            if n == 0:
+                return {
+                    f"Produto Encontrado ({loja_nome})": "",
+                    f"Preço ({loja_nome})":              "",
+                    f"Status ({loja_nome})":             "Não encontrado",
+                }, None
+            if 1 <= n <= len(candidatos):
+                escolhido = candidatos[n - 1]
+                res = processar_match(nome, escolhido, loja, dados)
+                campos = {
+                    f"Produto Encontrado ({loja_nome})": res["descricao"],
+                    f"Preço ({loja_nome})":              res["preco"],
+                    f"Status ({loja_nome})":             res["status"],
                 }
-                st.session_state.etapa = "selecao"
-                st.rerun()
-                return
-
-            # ── Alabarce ──────────────────────────────────
-            for loja in LOJAS:
-                if loja.get("tipo") != "alabarce":
-                    continue
-
-                loja_nome = loja["nome"]
-                chave_loja = loja_nome.lower()
-                escolhas.setdefault(chave_loja, {})
-
-                if chave in escolhas[chave_loja]:
-                    entrada = escolhas[chave_loja][chave]
-                    if entrada is None:
-                        linha[f"Produto Encontrado ({loja_nome})"] = ""
-                        linha[f"Preco ({loja_nome})"] = ""
-                        linha[f"Status ({loja_nome})"] = "Não encontrado"
-                    else:
-                        # Re-busca para obter preço atual
-                        lista_atual = buscar_produto_alabarce(nome)
-                        desc_salva = normalizar(entrada.get("descricao", ""))
-                        match = next(
-                            (p for p in lista_atual if normalizar(p.get("descricao", "")) == desc_salva),
-                            None,
-                        )
-                        if match:
-                            preco = match["preco"]
-                            status = "OK" if preco else "Indisponível"
-                            linha[f"Produto Encontrado ({loja_nome})"] = match["descricao"]
-                        else:
-                            preco = entrada.get("preco", "")
-                            status = "OK" if preco else "Indisponível"
-                            linha[f"Produto Encontrado ({loja_nome})"] = entrada.get("descricao", "")
-                        linha[f"Preco ({loja_nome})"] = preco
-                        linha[f"Status ({loja_nome})"] = status
-                    continue
-
-                # Produto novo no Alabarce
-                lista = buscar_produto_alabarce(nome)
-                if not lista:
-                    escolhas[chave_loja][chave] = None
-                    salvar_escolhas(escolhas)
-                    linha[f"Produto Encontrado ({loja_nome})"] = ""
-                    linha[f"Preco ({loja_nome})"] = ""
-                    linha[f"Status ({loja_nome})"] = "Não encontrado"
-                    continue
-
-                candidatos = encontrar_candidatos(nome, lista)
-                if not candidatos:
-                    escolhas[chave_loja][chave] = None
-                    salvar_escolhas(escolhas)
-                    linha[f"Produto Encontrado ({loja_nome})"] = ""
-                    linha[f"Preco ({loja_nome})"] = ""
-                    linha[f"Status ({loja_nome})"] = "Sem match"
-                    continue
-
-                if len(candidatos) == 1:
-                    escolhido = candidatos[0]
-                    escolhas[chave_loja][chave] = _slim(escolhido)
-                    salvar_escolhas(escolhas)
-                    linha[f"Produto Encontrado ({loja_nome})"] = escolhido["descricao"]
-                    linha[f"Preco ({loja_nome})"] = escolhido.get("preco", "")
-                    linha[f"Status ({loja_nome})"] = "OK" if escolhido.get("preco") else "Indisponível"
-                else:
-                    # Precisa seleção
-                    pendencias_selecao.append((loja, candidatos))
-
-            if pendencias_selecao:
-                st.session_state.produto_atual_idx = idx
-                st.session_state.pendente_selecao = {
-                    "nome": nome,
-                    "chave": chave,
-                    "linha": linha,
-                    "pendencias": pendencias_selecao,
-                }
-                st.session_state.etapa = "selecao"
-                st.rerun()
-                return
-
-            st.session_state.resultados.append(linha)
-            idx += 1
-            time.sleep(DELAY_ENTRE_BUSCAS)
-            barra.progress(idx / len(produtos), text=f"Produto {idx}/{len(produtos)}")
-
-        # Busca concluída
-        st.session_state.etapa = "concluido"
-        st.rerun()
-
-    # ── Etapa de seleção do usuário ───────────────────────────
-    elif st.session_state.etapa == "selecao":
-        info = st.session_state.pendente_selecao
-        nome = info["nome"]
-        chave = info["chave"]
-        linha = info["linha"]
-        escolhas = st.session_state.escolhas
-
-        st.subheader(f"Escolha necessária para: **{nome}**")
-
-        with st.form(key=f"form_selecao_{chave}"):
-            selecoes = {}
-            for loja, candidatos in info["pendencias"]:
-                loja_nome = loja["nome"]
-                opcoes = ["Nenhum / Pular"]
-                for c in candidatos:
-                    preco = extrair_preco(c) or c.get("preco", "?")
-                    desc = c.get("descricao", "?")
-                    opcoes.append(f"{desc} — R$ {preco}")
-
-                escolha_idx = st.selectbox(
-                    f"**{loja_nome}** — selecione o produto:",
-                    range(len(opcoes)),
-                    format_func=lambda i, o=opcoes: o[i],
-                    key=f"sel_{chave}_{normalizar(loja_nome)}",
-                )
-                selecoes[loja_nome] = (escolha_idx, candidatos, loja)
-
-            submitted = st.form_submit_button("Confirmar escolha", type="primary")
-
-        if submitted:
-            for loja_nome, (escolha_idx, candidatos, loja) in selecoes.items():
-                chave_loja = loja_nome.lower()
-                escolhas.setdefault(chave_loja, {})
-
-                if escolha_idx == 0:
-                    escolhas[chave_loja][chave] = None
-                    linha[f"Produto Encontrado ({loja_nome})"] = ""
-                    linha[f"Preco ({loja_nome})"] = ""
-                    linha[f"Status ({loja_nome})"] = "Não encontrado"
-                else:
-                    escolhido = candidatos[escolha_idx - 1]
-                    escolhas[chave_loja][chave] = _slim(escolhido)
-
-                    if loja.get("tipo") == "vipcommerce" and loja_nome in st.session_state.dados_lojas:
-                        dados = st.session_state.dados_lojas[loja_nome]
-                        res = processar_match(nome, escolhido, loja, dados)
-                        linha[f"Produto Encontrado ({loja_nome})"] = res["descricao"]
-                        linha[f"Preco ({loja_nome})"] = res["preco"]
-                        linha[f"Status ({loja_nome})"] = res["status"]
-                    else:
-                        linha[f"Produto Encontrado ({loja_nome})"] = escolhido.get("descricao", "")
-                        linha[f"Preco ({loja_nome})"] = escolhido.get("preco", "")
-                        linha[f"Status ({loja_nome})"] = "OK" if escolhido.get("preco") else "Indisponível"
-
-            salvar_escolhas(escolhas)
-            st.session_state.resultados.append(linha)
-            st.session_state.produto_atual_idx += 1
-            st.session_state.pendente_selecao = None
-            st.session_state.etapa = "buscando"
-            st.rerun()
-
-    # ── Concluído ─────────────────────────────────────────────
-    elif st.session_state.etapa == "concluido":
-        resultados = st.session_state.resultados
-
-        ok = sum(
-            1 for r in resultados
-            if any(r.get(f"Status ({l['nome']})") == "OK" for l in LOJAS)
-        )
-
-        st.success(f"Busca concluída! **{ok}/{len(resultados)}** produto(s) com ao menos um preço.")
-
-        # Tabela de resultados
-        if resultados:
-            st.dataframe(resultados, use_container_width=True)
-
-            # Gerar CSV
-            csv_conteudo = gerar_csv(resultados)
-            salvar_csv_local(csv_conteudo)
-
-            hoje = date.today()
-            nome_arquivo = f"precos_{hoje.day:02d}_{hoje.month:02d}.csv"
-            st.download_button(
-                label="📥 Baixar CSV",
-                data=csv_conteudo,
-                file_name=nome_arquivo,
-                mime="text/csv",
-                type="primary",
-            )
-
-        if st.button("🔄 Nova busca"):
-            for chave in list(st.session_state.keys()):
-                del st.session_state[chave]
-            st.rerun()
-
-
-if __name__ == "__main__":
-    main()
+                return campos, _slim(escolhido)
+        except (ValueError, EOFError):
+            escolhido = candidatos[0]
+            res = processar_match(nome, escolhido, loja, dados)
+            campos = {
+                f"Produto Encontrado ({loja_nome})": res["descricao"],
+                f"Preço ({loja_nome})":              res["preco"],
+                f"Status ({loja_nome})":             res["status"],
+            }
+            return campos, _slim(escolhido)
