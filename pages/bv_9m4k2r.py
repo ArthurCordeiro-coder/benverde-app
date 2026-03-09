@@ -323,14 +323,16 @@ def _render_css_tema() -> None:
     }}
     .stTabs [data-baseweb="tab-panel"] {{ background: transparent !important; }}
 
-    .stButton > button {{
+    .stButton > button,
+    .stDownloadButton > button {{
         border-radius: 12px; font-weight: 500; font-size: 0.88rem;
         background: var(--glass-bg) !important;
         border: 1px solid var(--glass-border) !important;
         color: {t['texto']} !important;
         transition: all 0.2s ease !important;
     }}
-    .stButton > button:hover {{
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {{
         background: rgba(255,255,255,0.13) !important;
         border-color: rgba(76,175,125,0.4) !important;
         transform: translateY(-1px);
