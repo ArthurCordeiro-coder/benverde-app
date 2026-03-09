@@ -154,6 +154,11 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
     # Flag para interromper esperas quando a página crasha
     _page_crashed = [False]
 
+    def _on_crash(_pg):
+        _page_crashed[0] = True
+        log.warning("Playwright [%s]: renderer crashou (token já capturado: %s)",
+                     loja["nome"], bool(resultado["token"]))
+
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(
@@ -168,13 +173,7 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                 user_agent=_HEADERS_NAVEGADOR["User-Agent"]
             )
             page = context.new_page()
-            # Crash do renderer é esperado em containers com memória limitada.
-            # O token já foi capturado nos requests iniciais (antes do crash).
-            page.on("crash", lambda _pg: (
-                _page_crashed.__setitem__(0, True),
-                log.warning("Playwright [%s]: renderer crashou (token já capturado: %s)",
-                            loja["nome"], bool(resultado["token"]))
-            ))
+            page.on("crash", _on_crash)
             page.set_default_timeout(30_000)
 
             def interceptar(request):
@@ -218,8 +217,12 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                         pass
 
             page.on("request", interceptar)
+
+            # "commit" retorna assim que a resposta HTTP chega, antes do JS
+            # pesado rodar. Isso evita bloquear 30s quando o renderer crasha
+            # antes de domcontentloaded.
             try:
-                page.goto(loja["url"], wait_until="domcontentloaded", timeout=30_000)
+                page.goto(loja["url"], wait_until="commit", timeout=30_000)
             except Exception:
                 pass  # goto pode lançar se a página crashar durante o carregamento
 
@@ -227,7 +230,10 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
             for _ in range(30):
                 if resultado["token"] or _page_crashed[0]:
                     break
-                page.wait_for_timeout(500)
+                try:
+                    page.wait_for_timeout(500)
+                except Exception:
+                    break  # página crashou durante a espera
 
             # Se pegou token mas não cd_id, digita algo para forçar
             # requisições à API de busca (que contém org/filial/cd na URL)
@@ -249,7 +255,10 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
 
             # Última tentativa: espera mais um pouco caso requests estejam em voo
             if resultado["token"] and not resultado["cd_id"] and not _page_crashed[0]:
-                page.wait_for_timeout(3000)
+                try:
+                    page.wait_for_timeout(3000)
+                except Exception:
+                    pass
 
             # Tenta ler vip-token dos cookies do browser
             if not resultado["token"] and not _page_crashed[0]:

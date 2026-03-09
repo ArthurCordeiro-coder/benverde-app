@@ -9,9 +9,11 @@ Integra o pipeline buscar_precos.py com UI interativa:
 
 import csv
 import io
+import logging
 import os
 import subprocess
 import sys
+import traceback
 from datetime import date
 
 # Define o path dos browsers ANTES de qualquer import do playwright.
@@ -221,6 +223,7 @@ def _fase_capturando():
             else:
                 st.warning(f"⚠️ Token não capturado para {loja['nome']} — loja ignorada.")
         except Exception as exc:
+            logging.error("Falha token %s:\n%s", loja['nome'], traceback.format_exc())
             st.warning(f"⚠️ Falha ao capturar token de {loja['nome']}: {exc}")
 
     if not dados_lojas:
