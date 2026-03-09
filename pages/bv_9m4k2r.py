@@ -1458,9 +1458,19 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
 @st.cache_data(show_spinner=False)
 def _exportar_tabela_cache(fig_json: str, w: int, h: int) -> tuple:
     """Renderiza figura Plotly em JPEG e PDF via kaleido (resultado em cache)."""
+    import os
+    from pathlib import Path
     import kaleido as _kaleido
     import plotly.io as pio
-    _kaleido.get_chrome_sync()  # baixa Chrome se ainda não estiver disponível
+
+    # kaleido 1.x precisa do Chrome; no Streamlit Cloud o venv é read-only,
+    # então passa um caminho gravável para o download.
+    _chrome_dir = Path("/home/adminuser/.kaleido_browser")
+    _chrome_dir.mkdir(parents=True, exist_ok=True)
+    chrome_exe = _kaleido.get_chrome_sync(path=str(_chrome_dir))
+    if chrome_exe:
+        os.environ["CHROME_PATH"] = str(chrome_exe)
+
     fig  = pio.from_json(fig_json)
     jpeg = fig.to_image(format="jpeg", width=w, height=h, scale=2)
     pdf  = fig.to_image(format="pdf",  width=w, height=h)
