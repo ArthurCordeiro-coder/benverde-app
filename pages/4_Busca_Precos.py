@@ -10,11 +10,33 @@ Integra o pipeline buscar_precos.py com UI interativa:
 import csv
 import io
 import os
+import subprocess
 import sys
 from datetime import date
 
+# Define o path dos browsers ANTES de qualquer import do playwright.
+# No Streamlit Cloud o home do processo pode ser read-only;
+# /tmp é sempre gravável e o Playwright respeita essa variável tanto
+# no download (playwright install) quanto no runtime (sync_playwright).
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/tmp/ms-playwright")
+
 import pandas as pd
 import streamlit as st
+
+
+@st.cache_resource(show_spinner=False)
+def _instalar_playwright_browsers() -> str:
+    """Baixa o Chromium do Playwright uma única vez por instância."""
+    result = subprocess.run(
+        [sys.executable, "-m", "playwright", "install", "chromium"],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        env=os.environ.copy(),   # inclui PLAYWRIGHT_BROWSERS_PATH
+    )
+    return f"rc={result.returncode} | {result.stderr[-300:] if result.returncode else 'ok'}"
+
+_instalar_playwright_browsers()
 
 # ─────────────────────────────────────────────────────────────
 # Importa funções do módulo buscar_precos.py
