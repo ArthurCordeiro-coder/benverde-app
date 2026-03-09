@@ -25,6 +25,7 @@ if _ROOT not in sys.path:
 from data_processor import (
     salvar_movimentacao_manual,
     load_movimentacoes_manuais,
+    deletar_movimentacao_manual,
     extrair_bananas_pdf_upload,
     extrair_pedido_semar,
 )
@@ -109,6 +110,7 @@ st.markdown("""
 _CAMINHO_JSON_DEFAULT = os.path.join(_ROOT, "dados", "cache", "estoque_manual.json")
 
 _LOJAS = [
+    "Entrada",
     "Loja 01", "Loja 02", "Loja 03", "Loja 04", "Loja 05",
     "Loja 06", "Loja 07", "Loja 08", "Loja 09", "Loja 10",
     "Loja 11", "Loja 12", "Loja 13", "Loja 14", "Loja 15",
@@ -172,6 +174,8 @@ def _set_all_tipo():
     for i in range(len(st.session_state["linhas"])):
         st.session_state["linhas"][i]["tipo"] = val
         st.session_state[f"tipo_{i}"] = val
+        if val == "entrada":
+            st.session_state["linhas"][i]["loja"] = "Entrada"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -325,10 +329,14 @@ for i, linha in enumerate(st.session_state["linhas"]):
         "qtd", value=float(linha["quant"]), min_value=0.0, step=0.5,
         key=f"qtd_{i}", label_visibility="collapsed",
     )
+    is_entrada = linha["tipo"] == "entrada"
+    if is_entrada:
+        linha["loja"] = "Entrada"
     loja_idx = _LOJAS.index(linha["loja"]) if linha["loja"] in _LOJAS else 0
     linha["loja"] = cols[3].selectbox(
         "loja", options=_LOJAS, index=loja_idx,
         key=f"loja_{i}", label_visibility="collapsed",
+        disabled=is_entrada,
     )
     tipo_idx = _TIPOS.index(linha["tipo"]) if linha["tipo"] in _TIPOS else 0
     linha["tipo"] = cols[4].radio(
@@ -351,7 +359,18 @@ with col_add:
 with col_rem:
     if st.button("🗑 Remover selecionadas", use_container_width=True):
         antes = len(st.session_state["linhas"])
-        st.session_state["linhas"] = [l for l in st.session_state["linhas"] if not l["sel"]]
+        # Lê seleção direto dos widgets (session_state), não do dict auxiliar
+        selecionadas = {
+            i for i in range(antes)
+            if st.session_state.get(f"sel_{i}", False)
+        }
+        st.session_state["linhas"] = [
+            l for i, l in enumerate(st.session_state["linhas"])
+            if i not in selecionadas
+        ]
+        # Limpa chaves de checkbox obsoletas
+        for i in range(antes):
+            st.session_state.pop(f"sel_{i}", None)
         # Garante mínimo de 1 linha vazia
         if not st.session_state["linhas"]:
             st.session_state["linhas"] = [dict(_LINHA_VAZIA)]
@@ -401,22 +420,38 @@ st.markdown("#### 📋 Registros salvos hoje")
 try:
     todos = load_movimentacoes_manuais(caminho_json)
     hoje = date.today().isoformat()
-    hoje_registros = [r for r in todos if str(r.get("data", "")).startswith(hoje)]
+    # Guarda (índice_global, registro) para saber qual deletar
+    hoje_registros = [
+        (idx, r) for idx, r in enumerate(todos)
+        if str(r.get("data", "")).startswith(hoje)
+    ]
 
     if hoje_registros:
-        import pandas as pd
-        df_hoje = pd.DataFrame(hoje_registros)
+        from datetime import datetime as _dt
+        # Cabeçalho
+        hd = st.columns([1.5, 1.2, 2.5, 1.2, 1, 1.5, 0.5])
+        for col, label in zip(hd, ["Hora", "Tipo", "Produto", "Qtd (kg)", "Unid", "Loja", ""]):
+            col.markdown(f"**{label}**")
+        st.divider()
 
-        # Formata data
-        if "data" in df_hoje.columns:
-            df_hoje["data"] = pd.to_datetime(df_hoje["data"], errors="coerce").dt.strftime("%H:%M:%S")
+        for idx_global, r in hoje_registros:
+            hora = ""
+            try:
+                hora = _dt.fromisoformat(str(r.get("data", ""))).strftime("%H:%M:%S")
+            except Exception:
+                hora = str(r.get("data", ""))
 
-        colunas = [c for c in ["data", "tipo", "produto", "quant", "unidade", "loja"] if c in df_hoje.columns]
-        df_hoje = df_hoje[colunas].rename(columns={
-            "data": "Hora", "tipo": "Tipo", "produto": "Produto",
-            "quant": "Qtd (kg)", "unidade": "Unid", "loja": "Loja",
-        })
-        st.dataframe(df_hoje, hide_index=True, use_container_width=True)
+            cols = st.columns([1.5, 1.2, 2.5, 1.2, 1, 1.5, 0.5])
+            cols[0].write(hora)
+            cols[1].write(r.get("tipo", ""))
+            cols[2].write(r.get("produto", ""))
+            cols[3].write(f"{float(r.get('quant', 0)):,.1f}")
+            cols[4].write(r.get("unidade", ""))
+            cols[5].write(r.get("loja", ""))
+            if cols[6].button("🗑", key=f"del_reg_{idx_global}", help="Deletar registro"):
+                deletar_movimentacao_manual(idx_global, caminho_json)
+                st.rerun()
+
         st.caption(f"Total hoje: {len(hoje_registros)} registro(s)")
     else:
         st.info("Nenhum registro salvo hoje.")

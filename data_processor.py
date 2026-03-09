@@ -1107,6 +1107,21 @@ def load_movimentacoes_manuais(caminho_json: str) -> list:
         return []
 
 
+def deletar_movimentacao_manual(indice: int, caminho_json: str) -> None:
+    """Remove o registro na posição `indice` da lista de movimentações."""
+    registros = load_movimentacoes_manuais(caminho_json)
+    if 0 <= indice < len(registros):
+        registros.pop(indice)
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
+        tmp = caminho_json + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(registros, f, ensure_ascii=False, indent=2, default=str)
+        os.replace(tmp, caminho_json)
+    except Exception as exc:
+        logger.error("Falha ao deletar movimentação manual '%s': %s", caminho_json, exc)
+
+
 # ---------------------------------------------------------------------------
 # 7. Extrator de bananas de NF-e para upload manual
 # ---------------------------------------------------------------------------
@@ -1165,7 +1180,8 @@ def load_registros_caixas(caminho_json: str = _DEFAULT_CAIXAS_JSON) -> pd.DataFr
       data | loja | n_loja | caixas_benverde | caixas_ccj | caixas_bananas | total | entregue
     """
     _colunas = ["data", "loja", "n_loja", "caixas_benverde",
-                "caixas_ccj", "caixas_bananas", "total", "entregue"]
+                "caixas_ccj", "ccj_banca", "ccj_mercadoria", "ccj_retirada",
+                "caixas_bananas", "total", "entregue"]
     if not caminho_json or not os.path.isfile(caminho_json):
         return pd.DataFrame(columns=_colunas)
     try:
@@ -1179,7 +1195,8 @@ def load_registros_caixas(caminho_json: str = _DEFAULT_CAIXAS_JSON) -> pd.DataFr
                 df[col] = None
         df = df[_colunas].copy()
         df["n_loja"] = pd.to_numeric(df["n_loja"], errors="coerce").fillna(0).astype(int)
-        for col in ["caixas_benverde", "caixas_ccj", "caixas_bananas", "total"]:
+        for col in ["caixas_benverde", "caixas_ccj", "ccj_banca", "ccj_mercadoria",
+                    "ccj_retirada", "caixas_bananas", "total"]:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
         return df
     except Exception as exc:

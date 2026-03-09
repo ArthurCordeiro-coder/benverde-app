@@ -133,32 +133,49 @@ st.markdown(f"#### 📦 Registro de Caixas — {nome_loja}")
 
 with st.form("form_caixas", clear_on_submit=True):
     caixas_benverde = st.number_input("Caixas Benverde", min_value=0, step=1, value=0)
-    caixas_ccj      = st.number_input("Caixas CCJ",      min_value=0, step=1, value=0)
     caixas_bananas  = st.number_input("Caixas Bananas",  min_value=0, step=1, value=0)
-    entregue        = st.radio("Entregue?", options=["sim", "não"], horizontal=True)
+    caixas_ccj      = st.number_input("Caixas CCJ",      min_value=0, step=1, value=0)
+
+    st.markdown("↳ **Distribuição das Caixas CCJ:**")
+    ccj_col1, ccj_col2, ccj_col3 = st.columns(3)
+    ccj_banca      = ccj_col1.number_input("Caixas na banca",       min_value=0, step=1, value=0)
+    ccj_mercadoria = ccj_col2.number_input("Caixas c/ mercadoria",  min_value=0, step=1, value=0)
+    ccj_retirada   = ccj_col3.number_input("Caixas p/ retirada",    min_value=0, step=1, value=0)
+
+    entregue = st.radio("Entregue?", options=["sim", "não"], horizontal=True)
 
     st.markdown('<div class="btn-registrar">', unsafe_allow_html=True)
     submitted = st.form_submit_button("💾 Registrar", use_container_width=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 if submitted:
-    total = int(caixas_benverde) + int(caixas_ccj) + int(caixas_bananas)
-    registro = {
-        "data":            datetime.now().date().isoformat(),
-        "loja":            nome_loja,
-        "n_loja":          int(n_loja),
-        "caixas_benverde": int(caixas_benverde),
-        "caixas_ccj":      int(caixas_ccj),
-        "caixas_bananas":  int(caixas_bananas),
-        "total":           total,
-        "entregue":        entregue,
-    }
-    try:
-        salvar_registro_caixas(registro, _DEFAULT_CAIXAS_JSON)
-        st.success("✅ Registro salvo!")
-        st.rerun()
-    except Exception as exc:
-        st.error(f"❌ Erro ao salvar: {exc}")
+    soma_ccj = int(ccj_banca) + int(ccj_mercadoria) + int(ccj_retirada)
+    if soma_ccj > int(caixas_ccj):
+        st.error(
+            f"❌ A soma das sub-categorias CCJ ({soma_ccj}) não pode ser maior "
+            f"que o total de Caixas CCJ ({int(caixas_ccj)}). Corrija e registre novamente."
+        )
+    else:
+        total = int(caixas_benverde) + int(caixas_ccj) + int(caixas_bananas)
+        registro = {
+            "data":            datetime.now().date().isoformat(),
+            "loja":            nome_loja,
+            "n_loja":          int(n_loja),
+            "caixas_benverde": int(caixas_benverde),
+            "caixas_ccj":      int(caixas_ccj),
+            "ccj_banca":       int(ccj_banca),
+            "ccj_mercadoria":  int(ccj_mercadoria),
+            "ccj_retirada":    int(ccj_retirada),
+            "caixas_bananas":  int(caixas_bananas),
+            "total":           total,
+            "entregue":        entregue,
+        }
+        try:
+            salvar_registro_caixas(registro, _DEFAULT_CAIXAS_JSON)
+            st.success("✅ Registro salvo!")
+            st.rerun()
+        except Exception as exc:
+            st.error(f"❌ Erro ao salvar: {exc}")
 
 # ---------------------------------------------------------------------------
 # Histórico da loja (últimos 10 registros)
@@ -178,7 +195,9 @@ try:
             )
             df_loja = df_loja.rename(columns={
                 "data": "Data", "loja": "Loja", "n_loja": "Nº",
-                "caixas_benverde": "Benverde", "caixas_ccj": "CCJ",
+                "caixas_benverde": "Benverde",
+                "caixas_ccj": "CCJ", "ccj_banca": "CCJ Banca",
+                "ccj_mercadoria": "CCJ Mercadoria", "ccj_retirada": "CCJ Retirada",
                 "caixas_bananas": "Bananas", "total": "Total", "entregue": "Entregue?",
             })
             st.dataframe(df_loja, hide_index=True, use_container_width=True)

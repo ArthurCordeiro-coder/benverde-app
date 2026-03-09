@@ -1897,7 +1897,7 @@ def _render_aba_metas() -> None:
                     <th style="padding:0.7rem 0.8rem;text-align:left;font-weight:600;color:{t['texto_th']}">Status</th>
                 </tr>
             </thead>
-            <tbody>{{linhas_html}}</tbody>
+            <tbody>{linhas_html}</tbody>
         </table>
         </div>
         """
@@ -2603,7 +2603,7 @@ def _render_aba_caixas() -> None:
                     <th style="padding:0.65rem 0.8rem;text-align:center;color:white;font-weight:600">ENTREGUE?</th>
                 </tr>
             </thead>
-            <tbody>{{linhas_html}}</tbody>
+            <tbody>{linhas_html}</tbody>
         </table>
         </div>
         """
