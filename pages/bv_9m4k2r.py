@@ -1498,7 +1498,7 @@ def _exportar_tabela_cache(tabela_json: str) -> tuple:
         for j in range(len(cols)):
             cell = tbl[i, j]
             cell.set_facecolor(bg)
-            cell.set_text_props(color="rgba(255,255,255,0.85)")
+            cell.set_text_props(color=(1, 1, 1, 0.85))
             cell.set_edgecolor("#1e4a30")
 
     ax.set_title(
