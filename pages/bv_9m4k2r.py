@@ -1454,6 +1454,16 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
     return fig
 
 
+@st.cache_data(show_spinner=False)
+def _exportar_tabela_cache(fig_json: str, w: int, h: int) -> tuple:
+    """Renderiza figura Plotly em JPEG e PDF via kaleido (resultado em cache)."""
+    import plotly.io as pio
+    fig  = pio.from_json(fig_json)
+    jpeg = fig.to_image(format="jpeg", width=w, height=h, scale=2)
+    pdf  = fig.to_image(format="pdf",  width=w, height=h)
+    return jpeg, pdf
+
+
 _CSV_RENOMEAR = {
     "nome do produto": "Produto",
     "produto":         "Produto",
@@ -1824,19 +1834,7 @@ def _render_aba_metas() -> None:
     altura_px  = max(400, len(df_prog) * 32 + 120)
 
     try:
-        import kaleido  # noqa: F401 — verifica disponibilidade
-
-        @st.cache_data(show_spinner=False)
-        def _exportar_tabela(fig_json: str, w: int, h: int):
-            """Gera JPEG e PDF numa única execução — resultado fica em cache."""
-            import plotly.io as pio
-            fig = pio.from_json(fig_json)
-            jpeg = fig.to_image(format="jpeg", width=w, height=h, scale=2)
-            pdf  = fig.to_image(format="pdf",  width=w, height=h)
-            return jpeg, pdf
-
-        _jpeg, _pdf = _exportar_tabela(fig_export.to_json(), 1400, altura_px)
-
+        _jpeg, _pdf = _exportar_tabela_cache(fig_export.to_json(), 1400, altura_px)
         col_exp_j.download_button(
             "⬇ JPEG", _jpeg, "metas_progresso.jpg", "image/jpeg",
             width="stretch",
@@ -1845,12 +1843,8 @@ def _render_aba_metas() -> None:
             "⬇ PDF", _pdf, "metas_progresso.pdf", "application/pdf",
             width="stretch",
         )
-
-    except (ImportError, Exception) as _exc:
-        if isinstance(_exc, ImportError):
-            logger.warning("kaleido não instalado; exportação de imagem indisponível.")
-        else:
-            logger.error("Exportação de tabela falhou: %s", _exc)
+    except Exception as _exc:
+        logger.error("Exportação de tabela falhou: %s", _exc)
         col_exp_j.caption("JPEG indisponível")
         col_exp_p.caption("PDF indisponível")
 
