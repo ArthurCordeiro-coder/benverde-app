@@ -52,16 +52,6 @@ from auth import (
     rejeitar_usuario,
 )
 
-@st.cache_resource(show_spinner=False)
-def _garantir_chrome() -> None:
-    """Baixa o Chrome necessário para kaleido 1.x, uma única vez por instância."""
-    try:
-        import kaleido
-        kaleido.get_chrome_sync()
-    except Exception:
-        pass
-
-_garantir_chrome()
 
 # ---------------------------------------------------------------------------
 # Temas — Liquid Glass (escuro / claro)
@@ -1468,7 +1458,9 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
 @st.cache_data(show_spinner=False)
 def _exportar_tabela_cache(fig_json: str, w: int, h: int) -> tuple:
     """Renderiza figura Plotly em JPEG e PDF via kaleido (resultado em cache)."""
+    import kaleido as _kaleido
     import plotly.io as pio
+    _kaleido.get_chrome_sync()  # baixa Chrome se ainda não estiver disponível
     fig  = pio.from_json(fig_json)
     jpeg = fig.to_image(format="jpeg", width=w, height=h, scale=2)
     pdf  = fig.to_image(format="pdf",  width=w, height=h)
