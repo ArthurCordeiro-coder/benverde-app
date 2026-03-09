@@ -151,6 +151,9 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
         "org_id": None, "filial_id": None, "cd_id": None,
     }
 
+    # Flag para interromper esperas quando a página crasha
+    _page_crashed = [False]
+
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(
@@ -161,19 +164,18 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                     "--no-zygote", "--disable-extensions",
                 ],
             )
-            log.info("Playwright: browser lançado (v%s)", browser.version)
-            browser.on("disconnected", lambda: log.error(
-                "Playwright [%s]: browser desconectou inesperadamente", loja["nome"]
-            ))
             context = browser.new_context(
                 user_agent=_HEADERS_NAVEGADOR["User-Agent"]
             )
             page = context.new_page()
-            page.on("crash", lambda p: log.error(
-                "Playwright [%s]: página crashou — %s", loja["nome"], p
+            # Crash do renderer é esperado em containers com memória limitada.
+            # O token já foi capturado nos requests iniciais (antes do crash).
+            page.on("crash", lambda _pg: (
+                _page_crashed.__setitem__(0, True),
+                log.warning("Playwright [%s]: renderer crashou (token já capturado: %s)",
+                            loja["nome"], bool(resultado["token"]))
             ))
             page.set_default_timeout(30_000)
-            log.info("Playwright [%s]: abrindo %s", loja["nome"], loja["url"])
 
             def interceptar(request):
                 if "vipcommerce" not in request.url:
@@ -216,17 +218,20 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                         pass
 
             page.on("request", interceptar)
-            page.goto(loja["url"], wait_until="domcontentloaded", timeout=30_000)
+            try:
+                page.goto(loja["url"], wait_until="domcontentloaded", timeout=30_000)
+            except Exception:
+                pass  # goto pode lançar se a página crashar durante o carregamento
 
-            # Espera até 15s pelo token
+            # Espera até 15s pelo token (para imediatamente se página crashou)
             for _ in range(30):
-                if resultado["token"]:
+                if resultado["token"] or _page_crashed[0]:
                     break
                 page.wait_for_timeout(500)
 
             # Se pegou token mas não cd_id, digita algo para forçar
             # requisições à API de busca (que contém org/filial/cd na URL)
-            if resultado["token"] and not resultado["cd_id"]:
+            if resultado["token"] and not resultado["cd_id"] and not _page_crashed[0]:
                 try:
                     campo = page.locator(
                         "input[type='search'], input[type='text'], "
@@ -236,25 +241,31 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
                     campo.type("arroz")
                     # Espera até 10s pelo cd_id
                     for _ in range(20):
-                        if resultado["cd_id"]:
+                        if resultado["cd_id"] or _page_crashed[0]:
                             break
                         page.wait_for_timeout(500)
                 except Exception:
                     pass
 
             # Última tentativa: espera mais um pouco caso requests estejam em voo
-            if resultado["token"] and not resultado["cd_id"]:
+            if resultado["token"] and not resultado["cd_id"] and not _page_crashed[0]:
                 page.wait_for_timeout(3000)
 
             # Tenta ler vip-token dos cookies do browser
-            if not resultado["token"]:
-                cookies = context.cookies()
-                for c in cookies:
-                    if c["name"] == "vip-token" and c["value"] and len(c["value"]) > 20:
-                        resultado["token"] = c["value"]
-                        break
+            if not resultado["token"] and not _page_crashed[0]:
+                try:
+                    cookies = context.cookies()
+                    for c in cookies:
+                        if c["name"] == "vip-token" and c["value"] and len(c["value"]) > 20:
+                            resultado["token"] = c["value"]
+                            break
+                except Exception:
+                    pass
 
-            browser.close()
+            try:
+                browser.close()
+            except Exception:
+                pass  # browser pode já estar fechado após crash do renderer
 
         if resultado["token"]:
             log.info(f"{loja['nome']}: token via Playwright")
