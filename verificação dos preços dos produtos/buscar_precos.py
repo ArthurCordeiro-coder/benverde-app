@@ -156,16 +156,24 @@ def _capturar_token_via_playwright(loja: dict) -> dict | None:
             browser = p.chromium.launch(
                 headless=True,
                 args=[
-                    "--no-sandbox", "--disable-dev-shm-usage",
-                    "--disable-gpu", "--single-process",
-                    "--disable-extensions",
+                    "--no-sandbox", "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage", "--disable-gpu",
+                    "--no-zygote", "--disable-extensions",
                 ],
             )
+            log.info("Playwright: browser lançado (v%s)", browser.version)
+            browser.on("disconnected", lambda: log.error(
+                "Playwright [%s]: browser desconectou inesperadamente", loja["nome"]
+            ))
             context = browser.new_context(
                 user_agent=_HEADERS_NAVEGADOR["User-Agent"]
             )
             page = context.new_page()
+            page.on("crash", lambda p: log.error(
+                "Playwright [%s]: página crashou — %s", loja["nome"], p
+            ))
             page.set_default_timeout(30_000)
+            log.info("Playwright [%s]: abrindo %s", loja["nome"], loja["url"])
 
             def interceptar(request):
                 if "vipcommerce" not in request.url:
@@ -718,8 +726,8 @@ def buscar_produto_alabarce(termo: str, driver=None) -> list:
         with sync_playwright() as p:
             browser = p.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage",
-                      "--disable-gpu", "--single-process"],
+                args=["--no-sandbox", "--disable-setuid-sandbox",
+                      "--disable-dev-shm-usage", "--disable-gpu", "--no-zygote"],
             )
             page = browser.new_page()
             resultado = _buscar_alabarce_com_page(termo, page)
@@ -740,8 +748,8 @@ class _PlaywrightContext:
         self._pw = sync_playwright().start()
         self.browser = self._pw.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage",
-                  "--disable-gpu", "--single-process"],
+            args=["--no-sandbox", "--disable-setuid-sandbox",
+                  "--disable-dev-shm-usage", "--disable-gpu", "--no-zygote"],
         )
         self.page = self.browser.new_page()
         self.page.set_default_timeout(30_000)
