@@ -175,6 +175,31 @@ def _resolver_cx_para_kg(produto: str, quant: float, unidade: str):
 # Parse de data em nome de arquivo
 # ---------------------------------------------------------------------------
 
+def _extrair_data_saida_pdf(caminho_pdf: str) -> Optional[datetime]:
+    """Lê a DATA DA SAÍDA diretamente do texto de um DANFE (NF-e).
+
+    Procura pelo rótulo 'DATA DA SAÍDA' e captura o primeiro DD/MM/AAAA após ele.
+    Retorna None se não encontrar ou falhar.
+    """
+    _RE = re.compile(
+        r'DATA\s+DA\s+SA[IÍ]DA.{0,150}?(\d{2}/\d{2}/\d{4})',
+        re.IGNORECASE | re.DOTALL,
+    )
+    try:
+        with pdfplumber.open(caminho_pdf) as pdf:
+            for pagina in pdf.pages:
+                texto = pagina.extract_text(x_tolerance=3, y_tolerance=3) or ""
+                m = _RE.search(texto)
+                if m:
+                    try:
+                        return datetime.strptime(m.group(1), "%d/%m/%Y")
+                    except ValueError:
+                        pass
+    except Exception as exc:
+        logger.debug("Falha ao extrair DATA DA SAÍDA de '%s': %s", caminho_pdf, exc)
+    return None
+
+
 def parse_data_arquivo(nome_arq: str) -> Optional[datetime]:
     """Extrai data do nome de arquivo (padrões DD_MM ou DDMM)."""
     basename = os.path.splitext(os.path.basename(nome_arq))[0]
@@ -523,8 +548,11 @@ def _extrair_pedido_semar(caminho_pdf: str) -> list:
 def _worker_pedido(caminho_pdf: str) -> tuple:
     """Worker para load_pedidos_pdfs."""
     nome_arq = os.path.basename(caminho_pdf)
-    dt, loja = _parse_nome_arquivo_nfe(nome_arq)
-    produtos  = _extrair_todos_produtos_pdf(caminho_pdf)
+    dt_nome, loja = _parse_nome_arquivo_nfe(nome_arq)
+    dt = _extrair_data_saida_pdf(caminho_pdf)
+    if dt is None:
+        dt = dt_nome
+    produtos = _extrair_todos_produtos_pdf(caminho_pdf)
     return (nome_arq, dt, loja, produtos)
 
 
@@ -532,7 +560,9 @@ def _processar_pdf_worker(args: tuple) -> list:
     """Worker para calcular_estoque: detecta DANFE ou Pedido Semar."""
     caminho_pdf, tipo = args
     historico_local   = []
-    dt                = parse_data_arquivo(caminho_pdf)
+    dt = _extrair_data_saida_pdf(caminho_pdf)
+    if dt is None:
+        dt = parse_data_arquivo(caminho_pdf)
 
     eh_semar = False
     try:

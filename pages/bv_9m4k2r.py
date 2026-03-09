@@ -95,6 +95,8 @@ _TEMA_DARK = {
     # Toggle label
     "toggle_label":   "☀️ Modo claro",
     "icone":          "🌙",
+    # Dialog
+    "dialog_bg":      "rgba(10,28,18,0.97)",
 }
 
 _TEMA_LIGHT = {
@@ -136,6 +138,8 @@ _TEMA_LIGHT = {
     # Toggle label
     "toggle_label":   "🌙 Modo escuro",
     "icone":          "☀️",
+    # Dialog
+    "dialog_bg":      "rgba(235,248,240,0.98)",
 }
 
 
@@ -383,10 +387,35 @@ def _render_css_tema() -> None:
 
     div[data-testid="stDialog"] > div > div {{
         max-width: 900px; width: 90vw;
-        background: var(--glass-bg) !important;
+        background: {t['dialog_bg']} !important;
         backdrop-filter: blur(24px) !important;
         border: 1px solid var(--glass-border) !important;
         border-radius: 20px !important;
+    }}
+    /* Força legibilidade de todo o conteúdo do dialog */
+    div[data-testid="stDialog"] p,
+    div[data-testid="stDialog"] span,
+    div[data-testid="stDialog"] label,
+    div[data-testid="stDialog"] h1,
+    div[data-testid="stDialog"] h2,
+    div[data-testid="stDialog"] h3,
+    div[data-testid="stDialog"] h4,
+    div[data-testid="stDialog"] h5,
+    div[data-testid="stDialog"] small,
+    div[data-testid="stDialog"] [data-testid="stMarkdownContainer"] * {{
+        color: {t['texto']} !important;
+    }}
+    div[data-testid="stDialog"] [data-testid="stCaptionContainer"] * {{
+        color: {t['texto_suave']} !important;
+    }}
+    div[data-testid="stDialog"] input,
+    div[data-testid="stDialog"] textarea {{
+        background: {t['glass_bg']} !important;
+        color: {t['texto']} !important;
+        border-color: var(--glass-border) !important;
+    }}
+    div[data-testid="stDialog"] .stButton > button {{
+        color: {t['texto']} !important;
     }}
 
     /* Força cor de texto geral conforme tema do app */
@@ -1782,7 +1811,14 @@ def _render_aba_metas() -> None:
 
     # ---- Botões de exportação ----
     st.markdown("#### 📋 Progresso por Produto")
-    col_exp_j, col_exp_p, col_spacer = st.columns([1, 1, 8])
+    col_exp_j, col_exp_p, col_exp_c, col_spacer = st.columns([1, 1, 1, 7])
+
+    # CSV — sempre disponível
+    _csv_bytes = df_prog.to_csv(index=False).encode("utf-8")
+    col_exp_c.download_button(
+        "⬇ CSV", _csv_bytes, "metas_progresso.csv", "text/csv",
+        width="stretch",
+    )
 
     fig_export = _gerar_tabela_exportavel(df_prog)
     altura_px  = max(400, len(df_prog) * 32 + 120)
@@ -1810,13 +1846,13 @@ def _render_aba_metas() -> None:
             width="stretch",
         )
 
-    except ImportError:
-        col_exp_j.caption("⚠️ JPEG indisponível — `pip install kaleido`")
-        col_exp_p.caption("⚠️ PDF indisponível — `pip install kaleido`")
-    except Exception as _exc:
-        logger.error("Exportação de tabela falhou: %s", _exc)
-        col_exp_j.caption("⚠️ Exportação indisponível")
-        col_exp_p.caption("⚠️ Exportação indisponível")
+    except (ImportError, Exception) as _exc:
+        if isinstance(_exc, ImportError):
+            logger.warning("kaleido não instalado; exportação de imagem indisponível.")
+        else:
+            logger.error("Exportação de tabela falhou: %s", _exc)
+        col_exp_j.caption("JPEG indisponível")
+        col_exp_p.caption("PDF indisponível")
 
     # ---- Métricas resumidas ----
     total_produtos  = len(df_prog)
