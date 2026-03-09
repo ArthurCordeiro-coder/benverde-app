@@ -1844,9 +1844,11 @@ def _render_aba_metas() -> None:
             width="stretch",
         )
     except Exception as _exc:
+        import traceback as _tb
         logger.error("Exportação de tabela falhou: %s", _exc)
         col_exp_j.caption("JPEG indisponível")
         col_exp_p.caption("PDF indisponível")
+        st.error(f"**Erro exportação:** `{type(_exc).__name__}: {_exc}`\n\n```\n{_tb.format_exc()}\n```")
 
     # ---- Métricas resumidas ----
     total_produtos  = len(df_prog)
