@@ -417,9 +417,9 @@ def capturar_dados_loja(loja: dict) -> dict:
     if resultado["token"]:
         log.info(
             f"{loja['nome']}: org={resultado.get('org_id')} cd={resultado.get('cd_id')} "
-            f"sessao_id={resultado.get('sessao_id', '')[:8]}... "
-            f"session={resultado.get('session', '')[:8]}... "
-            f"token={resultado.get('token', '')[:20]}..."
+            f"sessao_id={(resultado.get('sessao_id') or '')[:8]}... "
+            f"session={(resultado.get('session') or '')[:8]}... "
+            f"token={(resultado.get('token') or '')[:20]}..."
         )
     else:
         log.error(f"{loja['nome']}: falha total na captura")
