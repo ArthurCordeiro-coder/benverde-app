@@ -52,6 +52,17 @@ from auth import (
     rejeitar_usuario,
 )
 
+@st.cache_resource(show_spinner=False)
+def _garantir_chrome() -> None:
+    """Baixa o Chrome necessário para kaleido 1.x, uma única vez por instância."""
+    try:
+        import kaleido
+        kaleido.get_chrome_sync()
+    except Exception:
+        pass
+
+_garantir_chrome()
+
 # ---------------------------------------------------------------------------
 # Temas — Liquid Glass (escuro / claro)
 # ---------------------------------------------------------------------------
@@ -1844,11 +1855,9 @@ def _render_aba_metas() -> None:
             width="stretch",
         )
     except Exception as _exc:
-        import traceback as _tb
         logger.error("Exportação de tabela falhou: %s", _exc)
         col_exp_j.caption("JPEG indisponível")
         col_exp_p.caption("PDF indisponível")
-        st.error(f"**Erro exportação:** `{type(_exc).__name__}: {_exc}`\n\n```\n{_tb.format_exc()}\n```")
 
     # ---- Métricas resumidas ----
     total_produtos  = len(df_prog)
