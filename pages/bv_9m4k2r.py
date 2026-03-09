@@ -1465,7 +1465,7 @@ def _exportar_tabela_cache(fig_json: str, w: int, h: int) -> tuple:
 
     # kaleido 1.x precisa do Chrome; no Streamlit Cloud o venv é read-only,
     # então passa um caminho gravável para o download.
-    _chrome_dir = Path("/home/adminuser/.kaleido_browser")
+    _chrome_dir = Path("/tmp/kaleido_browser")
     _chrome_dir.mkdir(parents=True, exist_ok=True)
     chrome_exe = _kaleido.get_chrome_sync(path=str(_chrome_dir))
     if chrome_exe:
