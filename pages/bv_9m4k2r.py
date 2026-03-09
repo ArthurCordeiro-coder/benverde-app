@@ -1456,24 +1456,67 @@ def _gerar_tabela_exportavel(df_prog: pd.DataFrame) -> "go.Figure":
 
 
 @st.cache_data(show_spinner=False)
-def _exportar_tabela_cache(fig_json: str, w: int, h: int) -> tuple:
-    """Renderiza figura Plotly em JPEG e PDF via kaleido (resultado em cache)."""
-    import os
-    from pathlib import Path
-    import kaleido as _kaleido
-    import plotly.io as pio
+def _exportar_tabela_cache(tabela_json: str) -> tuple:
+    """Renderiza tabela de progresso em JPEG e PDF via matplotlib (sem Chrome)."""
+    import io
+    import json
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
 
-    # kaleido 1.x precisa do Chrome; no Streamlit Cloud o venv é read-only,
-    # então passa um caminho gravável para o download.
-    _chrome_dir = Path("/tmp/kaleido_browser")
-    _chrome_dir.mkdir(parents=True, exist_ok=True)
-    chrome_exe = _kaleido.get_chrome_sync(path=str(_chrome_dir))
-    if chrome_exe:
-        os.environ["CHROME_PATH"] = str(chrome_exe)
+    dados = json.loads(tabela_json)
+    cols  = dados["cols"]
+    rows  = dados["rows"]
 
-    fig  = pio.from_json(fig_json)
-    jpeg = fig.to_image(format="jpeg", width=w, height=h, scale=2)
-    pdf  = fig.to_image(format="pdf",  width=w, height=h)
+    n_rows = len(rows)
+    fig_h  = max(4, n_rows * 0.38 + 1.2)
+    fig, ax = plt.subplots(figsize=(16, fig_h))
+    ax.axis("off")
+    fig.patch.set_facecolor("#0d2518")
+
+    tbl = ax.table(
+        cellText=rows,
+        colLabels=cols,
+        cellLoc="left",
+        loc="center",
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(9)
+    tbl.auto_set_column_width(range(len(cols)))
+
+    # Estilo cabeçalho
+    for j in range(len(cols)):
+        cell = tbl[0, j]
+        cell.set_facecolor("#2d7a4f")
+        cell.set_text_props(color="white", fontweight="bold")
+        cell.set_edgecolor("#4caf7d")
+
+    # Estilo linhas alternadas
+    for i in range(1, n_rows + 1):
+        bg = "#1a3d2b" if i % 2 == 0 else "#122d1f"
+        for j in range(len(cols)):
+            cell = tbl[i, j]
+            cell.set_facecolor(bg)
+            cell.set_text_props(color="rgba(255,255,255,0.85)")
+            cell.set_edgecolor("#1e4a30")
+
+    ax.set_title(
+        "Progresso de Metas — Benverde",
+        color="#4caf7d", fontsize=13, fontweight="bold", pad=10,
+    )
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="jpeg", bbox_inches="tight", dpi=150,
+                facecolor=fig.get_facecolor())
+    jpeg = buf.getvalue()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="pdf", bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    pdf = buf.getvalue()
+
+    plt.close(fig)
     return jpeg, pdf
 
 
@@ -1843,11 +1886,21 @@ def _render_aba_metas() -> None:
         width="stretch",
     )
 
-    fig_export = _gerar_tabela_exportavel(df_prog)
-    altura_px  = max(400, len(df_prog) * 32 + 120)
-
     try:
-        _jpeg, _pdf = _exportar_tabela_cache(fig_export.to_json(), 1400, altura_px)
+        import json as _json
+        _col_prod   = "Produtos"       if "Produtos"       in df_prog.columns else df_prog.columns[0]
+        _col_meta   = "meta"           if "meta"           in df_prog.columns else None
+        _col_pedido = "pedido"         if "pedido"         in df_prog.columns else None
+        _col_prog   = "Progresso"      if "Progresso"      in df_prog.columns else None
+        _col_status = "status da meta" if "status da meta" in df_prog.columns else None
+        _export_cols = [c for c in [_col_prod, _col_meta, _col_pedido, _col_prog, _col_status] if c]
+        _df_exp = df_prog[_export_cols].copy()
+        _df_exp.columns = [c.capitalize() for c in _df_exp.columns]
+        _tabela_json = _json.dumps({
+            "cols": list(_df_exp.columns),
+            "rows": _df_exp.astype(str).values.tolist(),
+        })
+        _jpeg, _pdf = _exportar_tabela_cache(_tabela_json)
         col_exp_j.download_button(
             "⬇ JPEG", _jpeg, "metas_progresso.jpg", "image/jpeg",
             width="stretch",
