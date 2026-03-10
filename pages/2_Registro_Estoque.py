@@ -12,6 +12,7 @@ import os
 import re as _re
 import sys
 import tempfile
+import unicodedata
 from datetime import datetime, date
 
 import pdfplumber
@@ -203,6 +204,72 @@ _VARIEDADES = [
     "BANANA MAÇÃ",
 ]
 
+# ---------------------------------------------------------------------------
+# Normalização de nomes de banana (PDF → variedade do selectbox)
+# ---------------------------------------------------------------------------
+# Mapeamento final deve coincidir com as opções em _VARIEDADES (MAIÚSCULAS)
+# Chaves em forma "sem acento + minúsculo" -> valor final igual à opção do select
+VARIACOES_BANANA = {
+    "banana maca":       "BANANA MAÇÃ",
+    "banana maca ":      "BANANA MAÇÃ",
+    "banana maca cx":    "BANANA MAÇÃ",
+    "banana maca kg":    "BANANA MAÇÃ",
+    "banana maca caixa": "BANANA MAÇÃ",
+    "banana maca extra": "BANANA MAÇÃ",
+    "banana da terra":   "BANANA DA TERRA",
+    "banana terra":      "BANANA DA TERRA",
+    "banana da terra kg":"BANANA DA TERRA",
+    "banana prata":      "BANANA PRATA",
+    "banana nanica":     "BANANA NANICA",
+    "banana nanica ":    "BANANA NANICA",
+    "banana nanica cx":  "BANANA NANICA",
+}
+
+# Palavras-chave que identificam cada variedade — detecta mesmo com texto extra
+_KEYWORDS_POR_VARIACAO = {
+    "BANANA MAÇÃ":     ["maca", "maça", "maç", "maçã"],
+    "BANANA DA TERRA": ["da terra", "terra"],
+    "BANANA PRATA":    ["prata"],
+    "BANANA NANICA":   ["nanica", "caturra", "d'agua", "dagua"],
+}
+
+
+def _strip_accents(s: str) -> str:
+    return ''.join(
+        c for c in unicodedata.normalize('NFD', s)
+        if unicodedata.category(c) != 'Mn'
+    )
+
+
+def normalizar_produto(nome: str) -> str:
+    """
+    Recebe o nome extraído do PDF e retorna uma string exatamente igual
+    a uma das opções em _VARIEDADES (em MAIÚSCULAS), quando possível.
+    Estratégia:
+      1. Limpar (lower, remover acentos, strip)
+      2. Tentar lookup direto no dicionário VARIACOES_BANANA
+      3. Se não achar, procurar por palavras-chave (KEYWORDS)
+      4. Se ainda não achar, retornar o nome original em UPPER (fallback).
+    """
+    if not nome:
+        return ""
+    raw = str(nome).strip()
+    chave = _strip_accents(raw.lower())
+
+    # 1) lookup direto
+    if chave in VARIACOES_BANANA:
+        return VARIACOES_BANANA[chave]
+
+    # 2) busca por palavras-chave
+    for variedade, keywords in _KEYWORDS_POR_VARIACAO.items():
+        for kw in keywords:
+            if kw in chave:
+                return variedade
+
+    # 3) fallback: devolve em maiúsculas (para não quebrar o fluxo)
+    return raw.strip().upper()
+
+
 # "bonificação" é contabilizada como saída de estoque, mas rastreada como tipo próprio
 _TIPOS = ["entrada", "saida", "bonificação"]
 
@@ -258,9 +325,13 @@ def _set_all_tipo():
 def _adicionar_linhas(novas: list[dict]):
     """Adiciona linhas ao formulário (usada após upload de NF-e ou Semar)."""
     for item in novas:
+        produto_normalizado = normalizar_produto(item.get("produto", ""))
+        # Se não reconheceu como variedade válida, default para BANANA NANICA
+        if produto_normalizado not in _VARIEDADES:
+            produto_normalizado = _VARIEDADES[0]
         st.session_state["linhas"].append({
             "sel":       False,
-            "variedade": item.get("produto", ""),
+            "variedade": produto_normalizado,
             "quant":     float(item.get("quant", 0.0)),
             "loja":      item.get("loja", ""),
             "tipo":      item.get("tipo", "entrada"),
