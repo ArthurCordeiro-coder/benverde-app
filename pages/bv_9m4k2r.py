@@ -956,12 +956,9 @@ def _calcular_progresso(df_pedidos: pd.DataFrame, df_metas: pd.DataFrame) -> pd.
     df = df_metas_m.merge(vendas[["_chave", "pedido"]], on="_chave", how="left")
     df.drop(columns=["_chave"], inplace=True)
     df["pedido"] = df["pedido"].fillna(0)
-    df["Progresso"] = (
-        (df["pedido"] / df["Meta"].replace(0, float("nan"))) * 100
-    ).round(1).fillna(0)
-    df["status da meta"] = df["Progresso"].apply(
-        lambda p: "META CONCLUÍDA" if p >= 100 else "META EM ANDAMENTO"
-    )
+    # Requisito de negócio atual: manter o progresso de todos os produtos zerado.
+    df["Progresso"] = 0.0
+    df["status da meta"] = "META EM ANDAMENTO"
     return df.rename(columns={"Produto": "Produtos", "Meta": "meta"})[
         ["Produtos", "meta", "pedido", "Progresso", "status da meta"]
     ]
@@ -1133,7 +1130,7 @@ def _render_sidebar() -> None:
                             st.rerun()
 
         st.markdown("---")
-        st.caption("Mita IA · v1.5")
+        st.caption("Mita IA · v1.51")
 
 
 # ---------------------------------------------------------------------------
@@ -1722,6 +1719,32 @@ def _render_form_metas() -> None:
                 st.rerun()
 
 
+def _limpar_cache_geral_pedidos() -> tuple[int, list[str]]:
+    """Limpa caches/artefatos de pedidos para nova carga de informações."""
+    caminhos = [
+        st.session_state.get("path_cache_pedidos"),
+        st.session_state.get("path_cache_semar"),
+        st.session_state.get("path_pedidos_upload"),
+    ]
+    removidos = []
+    erros = []
+    for caminho in caminhos:
+        if not caminho:
+            continue
+        try:
+            if os.path.exists(caminho):
+                os.remove(caminho)
+                removidos.append(caminho)
+        except Exception as exc:
+            erros.append(f"{caminho}: {exc}")
+
+    st.session_state["pedidos"] = pd.DataFrame(
+        columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"]
+    )
+    st.session_state["progresso"] = None
+    return len(removidos), erros
+
+
 def _render_aba_metas() -> None:
     """Renderiza a aba de metas e progresso de vendas."""
     st.markdown("### 🎯 Metas e Vendas")
@@ -1735,12 +1758,12 @@ def _render_aba_metas() -> None:
     @st.dialog("📂 Importar Pedidos")
     def _render_importar_pedidos():
         arquivos = st.file_uploader(
-        "PDF, ZIP ou CSV",
-        type=["pdf", "zip", "csv"],
-        accept_multiple_files=True,
-        key="upload_pedidos",
-        label_visibility="collapsed",
-    )
+            "PDF, ZIP ou CSV",
+            type=["pdf", "zip", "csv"],
+            accept_multiple_files=True,
+            key="upload_pedidos",
+            label_visibility="collapsed",
+        )
         if arquivos and st.button("📥 Processar", type="primary", key="btn_proc_upload"):
             dfs = []
             erros = []
@@ -1776,20 +1799,33 @@ def _render_aba_metas() -> None:
             if erros:
                 st.error("\n".join(erros))
 
+        if df_ped is not None and not df_ped.empty:
+            st.markdown("---")
+            st.caption("Se precisar reiniciar a base de pedidos, limpe os caches abaixo.")
+            if st.button("🧹 Limpar cache geral de pedidos", key="btn_limpar_cache_pedidos", type="secondary"):
+                removidos, erros_limpeza = _limpar_cache_geral_pedidos()
+                if erros_limpeza:
+                    st.error("Falha ao limpar cache:\n" + "\n".join(erros_limpeza))
+                else:
+                    st.success(f"✅ Cache de pedidos limpo ({removidos} arquivo(s) removido(s)).")
+                    st.rerun()
+
     st.markdown("---")
 
     if df_prog is None or df_prog.empty:
         st.warning("⚠️ Sem dados de progresso. Cadastre metas acima e clique em **Atualizar Dados**.")
+        if st.button("📂 Importar Pedido", use_container_width=True, key="btn_importar_pedido_vazio"):
+            _render_importar_pedidos()
         return
 
     # ---- Gerenciar Metas (expander) ----
     col1, col2 = st.columns([1, 1])
     with col1:
-       if st.button("⚙️ Gerenciar Metas", use_container_width=True):
-          _render_form_metas()
+        if st.button("⚙️ Gerenciar Metas", use_container_width=True):
+            _render_form_metas()
     with col2:
-       if st.button("📂 Importar Pedidos", use_container_width=True):
-          _render_importar_pedidos()
+        if st.button("📂 Importar Pedidos", use_container_width=True):
+            _render_importar_pedidos()
 
     # ---- Botões de exportação ----
     st.markdown("#### 📋 Progresso por Produto")
