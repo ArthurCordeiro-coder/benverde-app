@@ -58,49 +58,83 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 
     :root {
-        --verde-escuro: #1a4731;
-        --verde-medio:  #2d7a4f;
-        --borda:        #e5e7eb;
-        --cinza-fundo:  #f9fafb;
-        --amarelo-btn:  #e8843a;
-        --vermelho-btn: #8B1A1A;
+        --app-bg: radial-gradient(ellipse at 25% 15%, #1a4731 0%, #0d2518 55%, #060e09 100%);
+        --glass-bg: rgba(255,255,255,0.07);
+        --glass-border: rgba(255,255,255,0.16);
+        --texto: rgba(255,255,255,0.97);
+        --texto-suave: rgba(230,240,255,0.82);
+        --warning: #f59e0b;
+        --danger: #f97316;
     }
+
+    .stApp {
+        background: var(--app-bg) !important;
+        background-attachment: fixed !important;
+    }
+
+    [data-testid="stHeader"] { background: transparent !important; }
+    .block-container { padding-top: 1.25rem; }
 
     .page-header {
-        background: linear-gradient(135deg, #7a5200 0%, #b37800 100%);
-        padding: 1.2rem 2rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        padding: 1.2rem 1.6rem;
+        border-radius: 14px;
+        margin-bottom: 1.1rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.16);
     }
-    .page-header h1 { color: white; font-size: 1.6rem; font-weight: 700; margin: 0; }
-    .page-header p  { color: rgba(255,255,255,0.8); margin: 0; font-size: 0.9rem; }
+    .page-header h1 { color: var(--texto); font-size: 1.45rem; font-weight: 700; margin: 0; }
+    .page-header p  { color: var(--texto-suave); margin: 0; font-size: 0.9rem; }
 
-    /* Botão NF-e — amarelo/laranja */
+    .stMarkdown p, [data-testid="stCaptionContainer"] { color: var(--texto) !important; }
+    .stSubheader, h1, h2, h3, h4, h5, h6, label { color: var(--texto) !important; }
+
+    .stButton > button,
+    .stDownloadButton > button {
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--glass-bg) !important;
+        color: var(--texto) !important;
+    }
+
     .btn-nfe > button {
-        background-color: var(--amarelo-btn) !important;
+        background: var(--warning) !important;
+        border-color: var(--warning) !important;
+        color: #111827 !important;
+    }
+    .btn-salvar > button {
+        background: var(--danger) !important;
+        border-color: var(--danger) !important;
         color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
     }
 
-    /* Botão Salvar — vermelho */
-    .btn-salvar > button {
-        background-color: var(--vermelho-btn) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
+    .stTextInput > div > div > input,
+    .stNumberInput input,
+    .stSelectbox > div > div,
+    .stMultiSelect > div > div,
+    .stDateInput > div > div {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: var(--texto) !important;
+        border-radius: 10px !important;
     }
 
     .linha-form {
-        background: white;
-        border: 1px solid var(--borda);
-        border-radius: 8px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
         padding: 0.6rem 1rem;
         margin-bottom: 0.4rem;
     }
-    .stDataFrame { border-radius: 8px; }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        overflow: hidden;
+    }
 </style>
 """, unsafe_allow_html=True)
 

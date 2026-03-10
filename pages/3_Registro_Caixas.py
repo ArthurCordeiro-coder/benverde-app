@@ -44,27 +44,68 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
     html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 
-    .page-header {
-        background: linear-gradient(135deg, #1a4731 0%, #2d7a4f 100%);
-        padding: 1.2rem 2rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
+    :root {
+        --app-bg: radial-gradient(ellipse at 25% 15%, #1a4731 0%, #0d2518 55%, #060e09 100%);
+        --glass-bg: rgba(255,255,255,0.07);
+        --glass-border: rgba(255,255,255,0.16);
+        --texto: rgba(255,255,255,0.97);
+        --texto-suave: rgba(230,240,255,0.82);
+        --accent-strong: #3b82f6;
     }
-    .page-header h1 { color: white; font-size: 1.5rem; font-weight: 700; margin: 0; }
-    .page-header p  { color: rgba(255,255,255,0.8); margin: 0; font-size: 0.88rem; }
+
+    .stApp {
+        background: var(--app-bg) !important;
+        background-attachment: fixed !important;
+    }
+
+    [data-testid="stHeader"] { background: transparent !important; }
+    .block-container { padding-top: 1.25rem; }
+
+    .page-header {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        padding: 1.2rem 1.6rem;
+        border-radius: 14px;
+        margin-bottom: 1.1rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.16);
+    }
+    .page-header h1 { color: var(--texto); font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .page-header p  { color: var(--texto-suave); margin: 0; font-size: 0.9rem; }
+
+    .stMarkdown p, [data-testid="stCaptionContainer"] { color: var(--texto) !important; }
+    .stSubheader, h1, h2, h3, h4, h5, h6, label { color: var(--texto) !important; }
 
     .stButton > button {
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9rem;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        border: 1px solid var(--glass-border) !important;
+        background: var(--glass-bg) !important;
+        color: var(--texto) !important;
     }
     .btn-registrar > button {
-        background-color: #2d7a4f !important;
+        background: var(--accent-strong) !important;
         color: white !important;
-        border: none !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
+        border-color: var(--accent-strong) !important;
         width: 100%;
+    }
+
+    .stTextInput > div > div > input,
+    .stNumberInput input,
+    .stSelectbox > div > div,
+    .stRadio > div {
+        background: var(--glass-bg) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: var(--texto) !important;
+        border-radius: 10px !important;
+    }
+
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        overflow: hidden;
     }
 </style>
 """, unsafe_allow_html=True)
