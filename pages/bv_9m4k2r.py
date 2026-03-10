@@ -956,9 +956,12 @@ def _calcular_progresso(df_pedidos: pd.DataFrame, df_metas: pd.DataFrame) -> pd.
     df = df_metas_m.merge(vendas[["_chave", "pedido"]], on="_chave", how="left")
     df.drop(columns=["_chave"], inplace=True)
     df["pedido"] = df["pedido"].fillna(0)
-    # Requisito de negócio atual: manter o progresso de todos os produtos zerado.
-    df["Progresso"] = 0.0
-    df["status da meta"] = "META EM ANDAMENTO"
+    df["Progresso"] = (
+        (df["pedido"] / df["Meta"].replace(0, float("nan"))) * 100
+    ).round(1).fillna(0)
+    df["status da meta"] = df["Progresso"].apply(
+        lambda p: "META CONCLUÍDA" if p >= 100 else "META EM ANDAMENTO"
+    )
     return df.rename(columns={"Produto": "Produtos", "Meta": "meta"})[
         ["Produtos", "meta", "pedido", "Progresso", "status da meta"]
     ]
