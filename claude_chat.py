@@ -40,7 +40,7 @@ _MODELO       = "grok-4-1-fast-reasoning"
 _MODELO_VISAO = "grok-2-vision-1212"
 
 _cliente = OpenAI(
-    api_key=os.environ["XAI_API_KEY"],
+    api_key=os.environ.get("XAI_API_KEY", ""),
     base_url="https://api.x.ai/v1",
 )
 

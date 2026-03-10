@@ -1186,11 +1186,9 @@ def _render_sidebar() -> None:
         st.markdown("---")
 
         # ---- Buscar preços ----
-        # Modo automático: usa a página "💰 Busca de Preços" para escolha interativa.
         _SCRIPT_PRECOS = "verificação dos preços dos produtos\buscar_precos.py"
 
-        st.page_link("pages/4_Busca_Precos.py", label="💰 Busca de Preços (interativa)", icon="🛒", use_container_width=True)
-        st.caption("⚡ Ou atualize automaticamente sem seleção manual:")
+        st.caption("🛒 Atualizar preços automaticamente:")
 
         # Obtém session_id para indexar o estado global
         _ctx = st.runtime.scriptrunner.get_script_run_ctx()
@@ -2461,10 +2459,10 @@ def _render_aba_precos() -> None:
         <table style="width:100%;border-collapse:collapse;font-size:0.86rem">
             <thead>
                 <tr style="background:{t['th_bg']};border-bottom:1px solid {t['tabela_borda']}">
-                    {{header_html}}
+                    {header_html}
                 </tr>
             </thead>
-            <tbody>{{linhas_preco_html}}</tbody>
+            <tbody>{linhas_preco_html}</tbody>
         </table>
         </div>
         <p style='font-size:0.78rem;color:{t['texto_suave']};margin-top:0.4rem'>
