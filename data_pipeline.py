@@ -31,12 +31,21 @@ def _parse_preco_raw(valor_raw: Optional[str]) -> Optional[float]:
     v = str(valor_raw).strip()
     if v == "" or v.lower() in ("nan", "indisponivel", "nao encontrado", "não encontrado"):
         return None
-    # remove R, $, espaços
+    # remove símbolos de moeda e espaços
     v = v.replace("R$", "").replace("r$", "").replace("R", "").replace("$", "").strip()
-    # trocar vírgula por ponto se necessário
-    v = v.replace(".", "").replace(",", ".") if v.count(",") and v.count(".") == 0 else v.replace(",", ".")
-    # limpar texto restante
-    v = re.sub(r"[^\d\.]", "", v)
+    # limpa texto restante (mantém apenas dígitos, ponto e vírgula)
+    v = re.sub(r"[^\d\.,]", "", v)
+
+    if "," in v and "." in v:
+        # Ex.: 1.234,56 -> 1234.56
+        v = v.replace(".", "").replace(",", ".")
+    elif "," in v:
+        # Ex.: 4,89 -> 4.89
+        v = v.replace(",", ".")
+    elif "." in v and v.count(".") > 1:
+        # Ex.: 1.234.567 -> 1234567
+        v = v.replace(".", "")
+
     try:
         return float(v) if v != "" else None
     except Exception:

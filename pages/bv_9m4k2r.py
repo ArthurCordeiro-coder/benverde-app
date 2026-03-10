@@ -64,9 +64,9 @@ _TEMA_DARK = {
     "glass_border":   "rgba(255,255,255,0.15)",
     "sidebar_bg":     "rgba(13,37,24,0.75)",
     # Texto
-    "texto":          "rgba(255,255,255,0.85)",
-    "texto_suave":    "rgba(255,255,255,0.50)",
-    "texto_th":       "rgba(255,255,255,0.70)",
+    "texto":          "rgba(255,255,255,0.97)",
+    "texto_suave":    "rgba(230,240,255,0.82)",
+    "texto_th":       "rgba(255,255,255,0.92)",
     # Tabelas HTML
     "tabela_borda":   "rgba(255,255,255,0.10)",
     "th_bg":          "rgba(255,255,255,0.06)",
@@ -219,6 +219,14 @@ def _render_css_tema() -> None:
 
     .block-container {{ padding-top: 1.5rem; }}
 
+
+    .stMarkdown p,
+    [data-testid="stCaptionContainer"],
+    .st-emotion-cache-10trblm,
+    .st-emotion-cache-16idsys p {{
+        color: {t['texto']} !important;
+    }}
+
     .app-header {{
         background: var(--glass-bg);
         backdrop-filter: blur(16px);
@@ -248,9 +256,9 @@ def _render_css_tema() -> None:
     }}
     .metric-card .label {{ color: {t['texto_suave']}; font-size: 0.78rem;
         font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }}
-    .metric-card .value {{ color: #4caf7d; font-size: 2rem; font-weight: 700; }}
+    .metric-card .value {{ color: #8bd3ff; font-size: 2rem; font-weight: 700; }}
     .metric-card .delta {{ color: {t['texto_suave']}; font-size: 0.82rem; }}
-    .metric-card .delta.pos {{ color: #4caf7d; }}
+    .metric-card .delta.pos {{ color: #8bd3ff; }}
     .metric-card .delta.neg {{ color: var(--laranja); }}
 
     .progress-wrap {{
@@ -264,26 +272,26 @@ def _render_css_tema() -> None:
     .badge {{ display: inline-block; padding: 0.2rem 0.65rem;
               border-radius: 99px; font-size: 0.72rem; font-weight: 500;
               letter-spacing: 0.04em; text-transform: uppercase; }}
-    .badge-green  {{ background: rgba(16,185,129,0.20); color: #6ee7b7;
-                     border: 1px solid rgba(16,185,129,0.30); }}
-    .badge-yellow {{ background: rgba(245,200,66,0.15); color: #d97706;
-                     border: 1px solid rgba(245,200,66,0.30); }}
-    .badge-red    {{ background: rgba(239,68,68,0.15); color: #fca5a5;
-                     border: 1px solid rgba(239,68,68,0.30); }}
-    .badge-blue   {{ background: rgba(99,102,241,0.15); color: #c7d2fe;
-                     border: 1px solid rgba(99,102,241,0.30); }}
+    .badge-green  {{ background: rgba(56,189,248,0.18); color: #dbeafe;
+                     border: 1px solid rgba(56,189,248,0.42); }}
+    .badge-yellow {{ background: rgba(251,146,60,0.16); color: #ffedd5;
+                     border: 1px solid rgba(251,146,60,0.44); }}
+    .badge-red    {{ background: rgba(244,114,182,0.16); color: #fce7f3;
+                     border: 1px solid rgba(244,114,182,0.44); }}
+    .badge-blue   {{ background: rgba(129,140,248,0.17); color: #e0e7ff;
+                     border: 1px solid rgba(129,140,248,0.44); }}
     .banana-row   {{ background: {t['banana_row']} !important; }}
 
     .sidebar-status {{
-        background: rgba(76,175,125,0.12);
-        border-left: 3px solid #4caf7d;
+        background: rgba(56,189,248,0.16);
+        border-left: 3px solid #38bdf8;
         padding: 0.75rem 1rem;
         border-radius: 0 8px 8px 0;
         font-size: 0.82rem;
         color: {t['texto']};
         margin-bottom: 0.75rem;
     }}
-    .sidebar-status strong {{ color: #4caf7d; }}
+    .sidebar-status strong {{ color: #8bd3ff; }}
 
     .chat-container {{ max-height: 520px; overflow-y: auto; padding: 0.5rem; }}
     [data-testid="stChatMessage"] p,
@@ -292,7 +300,7 @@ def _render_css_tema() -> None:
         font-size: 1.05rem !important; line-height: 1.75 !important;
     }}
     [data-testid="stChatMessage"] strong {{
-        font-size: 1.05rem !important; color: #4caf7d;
+        font-size: 1.05rem !important; color: #8bd3ff;
     }}
     [data-testid="stChatMessage"] ul,
     [data-testid="stChatMessage"] ol {{
@@ -300,8 +308,8 @@ def _render_css_tema() -> None:
     }}
     [data-testid="stChatMessage"] li {{ margin-bottom: 0.35rem; }}
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {{
-        background: rgba(76,175,125,0.10);
-        border: 1px solid rgba(76,175,125,0.20);
+        background: rgba(56,189,248,0.12);
+        border: 1px solid rgba(56,189,248,0.26);
         border-radius: 12px; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem;
     }}
 
@@ -317,8 +325,8 @@ def _render_css_tema() -> None:
         background: transparent !important;
     }}
     .stTabs [aria-selected="true"] {{
-        background: rgba(76,175,125,0.20) !important;
-        color: #4caf7d !important;
+        background: rgba(56,189,248,0.22) !important;
+        color: #dbeafe !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.15);
     }}
     .stTabs [data-baseweb="tab-panel"] {{ background: transparent !important; }}
@@ -366,7 +374,7 @@ def _render_css_tema() -> None:
     div[data-testid="stMetricValue"] {{
         font-family: 'DM Mono', monospace;
         font-size: 1.8rem !important;
-        color: #4caf7d !important;
+        color: #8bd3ff !important;
     }}
     div[data-testid="stMetric"] {{
         background: var(--glass-bg);
@@ -982,17 +990,17 @@ def _barra_progresso_html(pct: float, meta_status: str) -> str:
     """
     pct_clip = min(pct, 100.0)
     if pct >= 100 or "CONCLUÍDA" in meta_status.upper():
-        cor = "#2d7a4f"   # verde
+        cor = "#3b82f6"   # azul (alto contraste)
     elif pct >= 70:
-        cor = "#f5c842"   # amarelo
+        cor = "#f59e0b"   # âmbar
     else:
-        cor = "#e8843a"   # laranja
+        cor = "#f97316"   # laranja
 
     return (
         f'<div class="progress-wrap">'
         f'<div class="progress-bar" style="width:{pct_clip:.1f}%;background:{cor};"></div>'
         f'</div>'
-        f'<small style="color:rgba(255,255,255,0.45)">{pct:.1f}%</small>'
+        f'<small style="color:var(--texto)">{pct:.1f}%</small>'
     )
 
 
@@ -2169,13 +2177,13 @@ def _render_aba_estoque() -> None:
         fig = go.Figure()
         fig.add_trace(go.Bar(
             x=df_entradas["Data"], y=df_entradas["Quantidade (kg)"],
-            name="Entradas", marker_color="#2d7a4f",
+            name="Entradas", marker_color="#3b82f6",
             text=df_entradas["Quantidade (kg)"].apply(lambda v: f"{v:.0f}"),
             textposition="outside",
         ))
         fig.add_trace(go.Bar(
             x=df_saidas["Data"], y=df_saidas["Quantidade (kg)"],
-            name="Saídas", marker_color="#e8843a",
+            name="Saídas", marker_color="#f97316",
             text=df_saidas["Quantidade (kg)"].apply(lambda v: f"{v:.0f}"),
             textposition="outside",
         ))
@@ -2190,7 +2198,7 @@ def _render_aba_estoque() -> None:
         fig.add_trace(go.Scatter(
             x=df_saldo_dia["Data"], y=df_saldo_dia["Saldo acumulado"],
             name="Saldo acumulado", mode="lines+markers",
-            line=dict(color="#f5c842", width=2.5, dash="dot"),
+            line=dict(color="#a78bfa", width=2.5, dash="dot"),
             marker=dict(size=7),
             yaxis="y2",
         ))

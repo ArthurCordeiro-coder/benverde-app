@@ -84,6 +84,20 @@ def test_norm_key_none():
     assert _norm_key(None) is None
 
 
+
+
+# ---------------------------------------------------------------------------
+# Testes: _parse_preco_raw
+# ---------------------------------------------------------------------------
+
+def test_parse_preco_raw_milhar_decimal_brasileiro():
+    from data_pipeline import _parse_preco_raw
+    assert _parse_preco_raw("R$ 1.234,56") == 1234.56
+
+def test_parse_preco_raw_decimal_com_ponto():
+    from data_pipeline import _parse_preco_raw
+    assert _parse_preco_raw("4.89") == 4.89
+
 # ---------------------------------------------------------------------------
 # Testes: _ultima_data_do_dict
 # ---------------------------------------------------------------------------
