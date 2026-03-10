@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "streamlit",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "streamlit", "run", "app.py"],
+      "port": 8501
+    },
+    {
+      "name": "streamlit-dev",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "streamlit", "run", "app.py", "--server.enableCORS", "false", "--server.enableXsrfProtection", "false"],
+      "port": 8501
+    }
+  ]
+}

@@ -112,11 +112,9 @@ st.markdown("""
     }
 
     .stTextInput > div > div > input,
-    .stNumberInput input,
     .stSelectbox > div > div,
     .stMultiSelect > div > div,
     .stDateInput > div > div,
-    div[data-baseweb="input"] > div,
     div[data-baseweb="select"] > div {
         background: var(--glass-bg) !important;
         border: 1px solid var(--glass-border) !important;
@@ -124,17 +122,33 @@ st.markdown("""
         border-radius: 10px !important;
     }
 
-    .stNumberInput input,
-    div[data-baseweb="input"] input {
-        color: var(--texto) !important;
-        -webkit-text-fill-color: var(--texto) !important;
-        caret-color: var(--texto) !important;
-        font-weight: 600 !important;
+    /* ── Number input: fundo escuro + texto branco legível ── */
+    [data-testid="stNumberInput"] div[data-baseweb="input"],
+    [data-testid="stNumberInput"] div[data-baseweb="input"] > div,
+    .stNumberInput div[data-baseweb="input"],
+    .stNumberInput div[data-baseweb="input"] > div {
+        background-color: rgba(13,37,24,0.85) !important;
+        background: rgba(13,37,24,0.85) !important;
+        border: 1px solid rgba(255,255,255,0.25) !important;
+        border-radius: 10px !important;
     }
 
+    [data-testid="stNumberInput"] input,
+    .stNumberInput input,
+    div[data-baseweb="input"] input {
+        background: transparent !important;
+        background-color: transparent !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important;
+        font-weight: 600 !important;
+        font-size: 1.05rem !important;
+    }
+
+    [data-testid="stNumberInput"] button,
     .stNumberInput button,
     div[data-baseweb="input"] button {
-        color: var(--texto) !important;
+        color: #ffffff !important;
         background: transparent !important;
         border: none !important;
     }
