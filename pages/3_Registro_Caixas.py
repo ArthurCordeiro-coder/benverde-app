@@ -95,11 +95,37 @@ st.markdown("""
     .stTextInput > div > div > input,
     .stNumberInput input,
     .stSelectbox > div > div,
-    .stRadio > div {
+    .stRadio > div,
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="select"] > div {
         background: var(--glass-bg) !important;
         border: 1px solid var(--glass-border) !important;
         color: var(--texto) !important;
         border-radius: 10px !important;
+    }
+
+    .stNumberInput input,
+    div[data-baseweb="input"] input {
+        color: var(--texto) !important;
+        -webkit-text-fill-color: var(--texto) !important;
+        caret-color: var(--texto) !important;
+        font-weight: 600 !important;
+    }
+
+    .stNumberInput button,
+    div[data-baseweb="input"] button {
+        color: var(--texto) !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .stRadio label,
+    .stRadio p,
+    div[role="radiogroup"] label,
+    div[role="radiogroup"] span {
+        color: var(--texto) !important;
+        opacity: 1 !important;
+        font-weight: 500 !important;
     }
 
     [data-testid="stDataFrame"] {

@@ -14,14 +14,11 @@ Uso:
 """
 
 import io
+import json
 import os
 import logging
 import re
-import subprocess
-import sys
 import tempfile
-import threading
-import time
 import zipfile
 from datetime import datetime
 
@@ -473,7 +470,7 @@ st.set_page_config(
     page_title="Mita IA",
     page_icon="🌿",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 # Esconde navegação automática entre páginas (multipage)
 st.markdown(
@@ -736,6 +733,7 @@ _DEFAULT_CACHE_PEDIDOS   = "dados/cache/cache_pedidos.json"
 _DEFAULT_CACHE_ESTOQUE   = "dados/cache/cache_estoque.json"
 _DEFAULT_METAS_LOCAL     = "dados/cache/metas_local.json"
 _DEFAULT_ESTOQUE_MANUAL  = "dados/cache/estoque_manual.json"
+_DEFAULT_PEDIDOS_UPLOAD  = "dados/cache/pedidos_importados.json"
 _DEFAULT_PASTA_SEMAR     = "dados/pedidos_semar"
 _DEFAULT_CACHE_SEMAR     = "dados/cache/cache_semar.json"
 
@@ -772,6 +770,7 @@ def _init_state() -> None:
         "path_cache_estoque":  _DEFAULT_CACHE_ESTOQUE,
         "path_metas_local":    _DEFAULT_METAS_LOCAL,
         "path_estoque_manual": _DEFAULT_ESTOQUE_MANUAL,
+        "path_pedidos_upload": _DEFAULT_PEDIDOS_UPLOAD,
         "caixas_lojas":        pd.DataFrame(),
         "path_caixas_json":    _DEFAULT_CAIXAS_JSON,
         "path_pasta_semar":    _DEFAULT_PASTA_SEMAR,
@@ -826,6 +825,12 @@ def carregar_dados() -> None:
         except Exception as exc:
             logger.warning("Falha ao carregar pedidos Semar: %s", exc)
 
+        df_importados = _carregar_pedidos_importados(st.session_state["path_pedidos_upload"])
+        if not df_importados.empty:
+            df_pedidos = pd.concat([df_pedidos, df_importados], ignore_index=True)
+            logger.info("Pedidos importados manualmente concatenados: %d linhas.", len(df_importados))
+
+        df_pedidos = _normalizar_df_pedidos(df_pedidos)
         st.session_state["pedidos"] = df_pedidos
         st.session_state["metas"]   = df_metas
 
@@ -1032,97 +1037,6 @@ def _cor_preco(preco, referencia) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Estado global thread-safe para busca de preços em background
-# ---------------------------------------------------------------------------
-
-_PRECOS_STATE: dict[str, dict] = {}
-_PRECOS_LOCK  = threading.Lock()
-
-
-def _rodar_busca_precos(session_id: str, script_path: str) -> None:
-    """Executa buscar_precos.py em background e atualiza _PRECOS_STATE."""
-    proc = None
-    try:
-        proc = subprocess.Popen(
-            [sys.executable, "-u", script_path],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            env={**os.environ,
-                 "PYTHONIOENCODING": "utf-8",
-                 "PYTHONUTF8": "1",
-                 "PYTHONUNBUFFERED": "1"},
-            cwd=os.path.dirname(script_path),
-        )
-
-        with _PRECOS_LOCK:
-            if session_id not in _PRECOS_STATE:
-                proc.kill()
-                return
-            _PRECOS_STATE[session_id]["proc"] = proc
-
-        for linha in iter(proc.stdout.readline, ""):
-            with _PRECOS_LOCK:
-                if session_id not in _PRECOS_STATE:
-                    proc.kill()
-                    return
-            linha = linha.rstrip()
-            if not linha:
-                continue
-            m = re.search(r"\[(\d+)/(\d+)\]", linha)
-            with _PRECOS_LOCK:
-                if session_id not in _PRECOS_STATE:
-                    proc.kill()
-                    return
-                _PRECOS_STATE[session_id]["status_txt"] = linha
-                if m:
-                    atual, total = int(m.group(1)), int(m.group(2))
-                    if total > 0:
-                        _PRECOS_STATE[session_id]["progresso"] = min(atual / total, 0.99)
-
-        try:
-            proc.wait(timeout=660)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-            with _PRECOS_LOCK:
-                if session_id in _PRECOS_STATE:
-                    _PRECOS_STATE[session_id].update(
-                        rodando=False, sucesso=False,
-                        erro="Timeout: processo encerrado após 11 minutos.",
-                    )
-            return
-
-        stderr_txt = proc.stderr.read()
-
-        with _PRECOS_LOCK:
-            if session_id not in _PRECOS_STATE:
-                return
-            if proc.returncode == 0:
-                _PRECOS_STATE[session_id].update(
-                    rodando=False, sucesso=True, progresso=1.0, erro="",
-                )
-            else:
-                _PRECOS_STATE[session_id].update(
-                    rodando=False, sucesso=False,
-                    erro=stderr_txt or "(sem detalhes)",
-                )
-
-    except Exception as exc:
-        if proc is not None:
-            try:
-                proc.kill()
-            except Exception:
-                pass
-        with _PRECOS_LOCK:
-            if session_id in _PRECOS_STATE:
-                _PRECOS_STATE[session_id].update(
-                    rodando=False, sucesso=False, erro=str(exc),
-                )
-
-
-# ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
 
@@ -1193,68 +1107,7 @@ def _render_sidebar() -> None:
 
         st.markdown("---")
 
-        # ---- Buscar preços ----
-        _SCRIPT_PRECOS = "verificação dos preços dos produtos\buscar_precos.py"
-
-        st.caption("🛒 Atualizar preços automaticamente:")
-
-        # Obtém session_id para indexar o estado global
-        _ctx = st.runtime.scriptrunner.get_script_run_ctx()
-        _sid = _ctx.session_id if _ctx else "default"
-
-        # Snapshot thread-safe do estado atual (nunca segurar o lock ao chamar Streamlit)
-        with _PRECOS_LOCK:
-            _ps = dict(_PRECOS_STATE.get(_sid, {}))
-
-        if not _ps:
-            # CASO 1 — Ocioso: mostra o botão
-            if st.button("🔍 Atualizar Preços (auto)", width="stretch", type="primary"):
-                with _PRECOS_LOCK:
-                    if _PRECOS_STATE.get(_sid, {}).get("rodando"):
-                        pass  # duplo clique: ignora
-                    else:
-                        _PRECOS_STATE[_sid] = {
-                            "rodando":    True,
-                            "progresso":  0.01,
-                            "status_txt": "⏳ Iniciando...",
-                            "erro":       "",
-                            "sucesso":    None,
-                            "proc":       None,
-                        }
-                        threading.Thread(
-                            target=_rodar_busca_precos,
-                            args=(_sid, _SCRIPT_PRECOS),
-                            daemon=True,
-                        ).start()
-                st.rerun()
-
-        elif _ps.get("rodando"):
-            # CASO 2 — Em execução: mostra progresso e botão cancelar
-            st.progress(_ps.get("progresso", 0.01))
-            st.caption(_ps.get("status_txt", ""))
-            if st.button("⏹ Cancelar", width="stretch"):
-                with _PRECOS_LOCK:
-                    _entry = _PRECOS_STATE.pop(_sid, {})
-                _proc = _entry.get("proc")
-                if _proc is not None:
-                    try:
-                        _proc.kill()
-                    except Exception:
-                        pass
-                st.rerun()
-            time.sleep(1.0)
-            st.rerun()
-
-        else:
-            # CASO 3 — Concluído: exibe resultado e volta ao botão
-            with _PRECOS_LOCK:
-                _entry = _PRECOS_STATE.pop(_sid, {})
-            if _entry.get("sucesso"):
-                st.success("✅ Busca de preços concluída!")
-            else:
-                _err = _entry.get("erro", "(sem detalhes)")
-                st.error(f"❌ Erro na busca de preços.\n\n```\n{_err}\n```")
-            st.rerun()
+        # ---- Buscar preços removido (função descontinuada) ----
 
         # ---- Limpar histórico do chat ----
         if st.button("🗑 Limpar histórico do chat", width="stretch"):
@@ -1570,6 +1423,55 @@ def _ler_csv(fonte) -> pd.DataFrame:
     return df
 
 
+def _normalizar_df_pedidos(df: pd.DataFrame) -> pd.DataFrame:
+    """Normaliza colunas/tipos do DataFrame de pedidos para manter consistência."""
+    if df is None or df.empty:
+        return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
+
+    novo = df.copy()
+    if "Produto" not in novo.columns and "produto" in novo.columns:
+        novo = novo.rename(columns={"produto": "Produto"})
+
+    for col in ["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"]:
+        if col not in novo.columns:
+            novo[col] = None
+
+    novo["Data"] = pd.to_datetime(novo["Data"], errors="coerce")
+    novo["QUANT"] = pd.to_numeric(novo["QUANT"], errors="coerce").fillna(0.0)
+    novo["VALOR TOTAL"] = pd.to_numeric(novo["VALOR TOTAL"], errors="coerce").fillna(0.0)
+    novo["VALOR UNIT"] = pd.to_numeric(novo["VALOR UNIT"], errors="coerce").fillna(0.0)
+    novo["Produto"] = novo["Produto"].astype(str).str.strip().str.upper()
+    novo["Loja"] = novo["Loja"].astype(str).str.strip()
+    novo["UNID"] = novo["UNID"].astype(str).str.strip().replace({"": "KG"})
+
+    return novo[["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"]]
+
+
+def _carregar_pedidos_importados(caminho_json: str) -> pd.DataFrame:
+    """Carrega pedidos importados manualmente (CSV/PDF/ZIP) persistidos em JSON."""
+    if not caminho_json or not os.path.isfile(caminho_json):
+        return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
+    try:
+        with open(caminho_json, encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
+        return _normalizar_df_pedidos(pd.DataFrame(data))
+    except Exception as exc:
+        logger.warning("Falha ao carregar pedidos importados '%s': %s", caminho_json, exc)
+        return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
+
+
+def _salvar_pedidos_importados(df: pd.DataFrame, caminho_json: str) -> None:
+    """Persiste pedidos importados para que sobrevivam ao botão Atualizar Dados."""
+    os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
+    df_norm = _normalizar_df_pedidos(df)
+    payload = df_norm.copy()
+    payload["Data"] = payload["Data"].apply(lambda d: d.isoformat() if pd.notna(d) else None)
+    with open(caminho_json, "w", encoding="utf-8") as f:
+        json.dump(payload.to_dict(orient="records"), f, ensure_ascii=False, indent=2)
+
+
 def _df_de_upload(arquivo) -> pd.DataFrame:
     """Processa um arquivo uploaded (PDF/CSV/ZIP) e retorna DataFrame de pedidos."""
     nome = arquivo.name.lower()
@@ -1851,20 +1753,26 @@ def _render_aba_metas() -> None:
                     except Exception as exc:
                         erros.append(f"{arq.name}: {exc}")
             if dfs:
-                novo = pd.concat(dfs, ignore_index=True)
+                novo_upload = _normalizar_df_pedidos(pd.concat(dfs, ignore_index=True))
+
                 existente = st.session_state.get("pedidos")
-                if existente is not None and not existente.empty:
-                    novo = pd.concat([existente, novo], ignore_index=True)
-                novo["QUANT"] = pd.to_numeric(novo.get("QUANT", 0), errors="coerce")
-                if "Produto" not in novo.columns and "produto" in novo.columns:
-                    novo = novo.rename(columns={"produto": "Produto"})
-                st.session_state["pedidos"] = novo
+                base = _normalizar_df_pedidos(existente) if existente is not None and not existente.empty else pd.DataFrame()
+                combinado = _normalizar_df_pedidos(pd.concat([base, novo_upload], ignore_index=True))
+
+                importados_existentes = _carregar_pedidos_importados(st.session_state["path_pedidos_upload"])
+                importados_combinados = _normalizar_df_pedidos(
+                    pd.concat([importados_existentes, novo_upload], ignore_index=True)
+                )
+
+                st.session_state["pedidos"] = combinado
+                _salvar_pedidos_importados(importados_combinados, st.session_state["path_pedidos_upload"])
+
                 if st.session_state.get("metas") is not None \
                         and not st.session_state["metas"].empty:
                     st.session_state["progresso"] = _calcular_progresso(
-                        novo, st.session_state["metas"]
+                        combinado, st.session_state["metas"]
                     )
-                st.success(f"✅ {len(novo)} linha(s) carregadas.")
+                st.success(f"✅ {len(novo_upload)} linha(s) importadas e registradas no sistema.")
             if erros:
                 st.error("\n".join(erros))
 
@@ -2107,7 +2015,7 @@ def _render_aba_estoque() -> None:
     n_movimentacoes = len(historico)
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("📦 Saldo atual (kg)", f"{saldo:,.1f}", delta=f"{saldo - total_saidas:+.1f} vs saídas")
+    c1.metric("📦 Saldo atual (kg)", f"{saldo:,.1f}", delta=f"{(total_entradas - total_saidas):+.1f} líquido")
     c2.metric("📥 Total entradas (kg)", f"{total_entradas:,.1f}")
     c3.metric("📤 Total saídas (kg)", f"{total_saidas:,.1f}")
     c4.metric("📄 Movimentações", n_movimentacoes)
@@ -2159,6 +2067,8 @@ def _render_aba_estoque() -> None:
 
     df_hist["unidade"] = df_hist["unidade"].apply(_limpar_unidade)
 
+    t = _get_tema()
+
     if not df_hist.empty:
         # Agrega por dia e tipo
         df_agg = (
@@ -2201,7 +2111,6 @@ def _render_aba_estoque() -> None:
             yaxis="y2",
         ))
 
-        t = _get_tema()
         fig.update_layout(
             height=380,
             barmode="group",
@@ -2224,37 +2133,43 @@ def _render_aba_estoque() -> None:
         .unstack(fill_value=0)
         .reset_index()
     )
-    if "entrada" in df_variedade.columns and "saida" in df_variedade.columns:
-        df_variedade["saldo"] = df_variedade["entrada"] - df_variedade["saida"]
-    elif "entrada" in df_variedade.columns:
-        df_variedade["saldo"] = df_variedade["entrada"]
-    else:
-        df_variedade["saldo"] = 0
+    entradas = df_variedade["entrada"] if "entrada" in df_variedade.columns else 0
+    saidas = df_variedade["saida"] if "saida" in df_variedade.columns else 0
+    bonifs = df_variedade["bonificação"] if "bonificação" in df_variedade.columns else 0
+    df_variedade["saldo"] = entradas - saidas - bonifs
 
     df_variedade = df_variedade.sort_values("saldo", ascending=False)
+    if df_variedade.empty:
+        st.info("Sem dados de variedades para exibir.")
+        return
 
-    fig_var = px.pie(
-        df_variedade,
-        names="produto",
-        values="saldo",
-        color_discrete_sequence=["#2d7a4f", "#4caf7d", "#f5c842", "#e8843a", "#a5d6b0"],
-        hole=0.45,
-    )
-    fig_var.update_layout(
-        height=300,
-        margin=dict(l=0, r=0, t=20, b=0),
-        showlegend=True,
-        **_plotly_base(t),
-    )
-    fig_var.update_traces(textinfo="percent+label")
-
+    df_variedade_pie = df_variedade[df_variedade["saldo"] > 0].copy()
+    if df_variedade_pie.empty:
+        st.info("Não há saldo positivo por variedade para montar o gráfico de pizza.")
+    else:
+        fig_var = px.pie(
+            df_variedade_pie,
+            names="produto",
+            values="saldo",
+            color_discrete_sequence=["#2d7a4f", "#4caf7d", "#f5c842", "#e8843a", "#a5d6b0"],
+            hole=0.45,
+        )
     col_pizza, col_tabela = st.columns([1, 1])
     with col_pizza:
-        st.plotly_chart(fig_var, width="stretch")
+        if not df_variedade_pie.empty:
+            fig_var.update_layout(
+                height=300,
+                margin=dict(l=0, r=0, t=20, b=0),
+                showlegend=True,
+                **_plotly_base(t),
+            )
+            fig_var.update_traces(textinfo="percent+label")
+            st.plotly_chart(fig_var, width="stretch")
     with col_tabela:
         st.dataframe(
             df_variedade.rename(columns={"produto": "Produto", "entrada": "Entradas (kg)",
-                                          "saida": "Saídas (kg)", "saldo": "Saldo (kg)"}),
+                                          "saida": "Saídas (kg)", "bonificação": "Bonificação (kg)",
+                                          "saldo": "Saldo (kg)"}),
             hide_index=True,
             width="stretch",
             height=280,
