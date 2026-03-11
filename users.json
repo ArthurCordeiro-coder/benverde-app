@@ -1,0 +1,19 @@
+[
+  {
+    "username": "Arthur_Cordeiro",
+    "nome": "Arthur Cordeiro Silva",
+    "salt": "ca08e008a2c9d86f76d29e6af8279ecf906bcc01bb7310ece79855840605c322",
+    "senha_hash": "c708dc823457e13553ea9b4574bb38fa0fd3d099f07f47f1b29942470f8381c7",
+    "is_admin": true,
+    "criado_em": "2026-03-05T16:07:17.874953+00:00"
+  },
+  {
+    "username": "Arthur_10",
+    "nome": "Arthur preços",
+    "salt": "96a5d78712dcddf4c7c217f7a550eb9f89aa6ffc430400493be2b9b30627d2fe",
+    "senha_hash": "ea30ab34079d0e1878685057b29f7eeedd7f12874203509c17469278d3bdce4b",
+    "is_admin": false,
+    "criado_em": "2026-03-11T22:43:18.695827+00:00",
+    "funcionalidade": "busca de precos"
+  }
+]
