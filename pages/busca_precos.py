@@ -35,8 +35,6 @@ _TEMA_DARK = {
     "texto_th": "rgba(255,255,255,0.92)",
     "tabela_borda": "rgba(255,255,255,0.10)",
     "th_bg": "rgba(255,255,255,0.06)",
-    "tr_par": "rgba(255,255,255,0.04)",
-    "tr_impar": "rgba(255,255,255,0.02)",
     "banana_row": "rgba(245,200,66,0.10)",
     "plot_font": "rgba(255,255,255,0.75)",
     "gridcolor": "rgba(255,255,255,0.08)",
@@ -56,8 +54,6 @@ _TEMA_LIGHT = {
     "texto_th": "#1a4731",
     "tabela_borda": "rgba(26,71,49,0.15)",
     "th_bg": "rgba(26,71,49,0.07)",
-    "tr_par": "rgba(255,255,255,0.70)",
-    "tr_impar": "rgba(232,245,238,0.50)",
     "banana_row": "rgba(245,200,66,0.18)",
     "plot_font": "#1a4731",
     "gridcolor": "rgba(26,71,49,0.10)",
@@ -170,7 +166,7 @@ html, body, [class*="css"] {{ font-family: 'DM Sans', sans-serif; }}
 .badge-green {{ background:rgba(16,185,129,.2); color:#6ee7b7; }}
 .badge-red {{ background:rgba(239,68,68,.2); color:#fca5a5; }}
 .badge-blue {{ background:rgba(59,130,246,.2); color:#93c5fd; }}
-.stApp, .stApp p, .stApp span, .stApp div, .stApp label, .stApp li, .stApp small, .stMarkdown p, .stMarkdown span, .stMarkdown div, td, th {{ color: {t['texto']} !important; }}
+.stMarkdown p, h1, h2, h3, h4, h5, h6, label {{ color: {t['texto']} !important; }}
 .stTextInput input, .stSelectbox [data-baseweb="select"] > div {{ background:{t['glass_bg']} !important; border:1px solid {t['glass_border']} !important; color:{t['texto']} !important; }}
 .stButton > button {{ border-radius:10px !important; }}
 </style>
@@ -254,13 +250,10 @@ if not df_exibir.empty:
         for c in colunas_exibir_h
     )
     linhas_preco_html = ""
-    for i, (_, row) in enumerate(df_exibir.iterrows()):
+    for _, row in df_exibir.iterrows():
         produto = str(row.get(col_prod_buscado, ""))
         is_banana = "BANANA" in produto.upper()
-        if is_banana:
-            bg = t["banana_row"]
-        else:
-            bg = t["tr_par"] if i % 2 == 0 else t["tr_impar"]
+        row_bg = f"background:{t['banana_row']};" if is_banana else ""
         valores_preco = [float(row[c]) for c in col_precos if c in row and pd.notna(row[c]) and row[c] != 0]
         ref_preco = min(valores_preco) if valores_preco else None
         celulas = ""
@@ -276,7 +269,7 @@ if not df_exibir.empty:
             else:
                 prefix = "🍌 " if is_banana and c == col_prod_buscado else ""
                 celulas += f"<td style='padding:0.55rem 0.8rem'>{prefix}{val}</td>"
-        linhas_preco_html += f"<tr style='background:{bg};'>{celulas}</tr>"
+        linhas_preco_html += f"<tr style='{row_bg}'>{celulas}</tr>"
     st.markdown(f"""
     <div style="overflow-x:auto;border:1px solid {t['tabela_borda']};border-radius:10px">
     <table style="width:100%;border-collapse:collapse;font-size:0.86rem">
