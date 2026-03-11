@@ -6,5 +6,13 @@
     "senha_hash": "c708dc823457e13553ea9b4574bb38fa0fd3d099f07f47f1b29942470f8381c7",
     "is_admin": true,
     "criado_em": "2026-03-05T16:07:17.874953+00:00"
+  },
+  {
+    "username": "alex_cordeiro",
+    "nome": "Alexandro Cordeiro",
+    "salt": "7c900bc364d6f2144f08b423175728f810dd9f1d9841a5630c975d324adef5bb",
+    "senha_hash": "f91f7eae0d484519e809a1b6ab321679d7bc64c45afc80dad7b095c787f072b0",
+    "is_admin": false,
+    "criado_em": "2026-03-06T17:52:55.801147+00:00"
   }
 ]
