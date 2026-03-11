@@ -23,6 +23,11 @@ from typing import Optional
 import pandas as pd
 import pdfplumber
 
+try:
+    from github_sync import push_file as _github_push
+except ImportError:
+    _github_push = None
+
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
@@ -256,6 +261,8 @@ def _salvar_cache(cache: dict, caminho_cache: str) -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(cache, f, ensure_ascii=False, default=str, indent=2)
         os.replace(tmp, caminho_cache)
+        if _github_push:
+            _github_push(caminho_cache)
     except Exception as exc:
         logger.error("Falha ao salvar cache '%s': %s", caminho_cache, exc)
 
@@ -1087,6 +1094,8 @@ def salvar_metas_local(lista_metas: list, caminho_json: str) -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(lista_metas, f, ensure_ascii=False, indent=2)
         os.replace(tmp, caminho_json)
+        if _github_push:
+            _github_push(caminho_json)
         logger.info("Metas salvas: %d item(s).", len(lista_metas))
     except Exception as exc:
         logger.error("Falha ao salvar metas '%s': %s", caminho_json, exc)
@@ -1117,6 +1126,8 @@ def salvar_movimentacao_manual(registros: list, caminho_json: str) -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(existentes, f, ensure_ascii=False, indent=2, default=str)
         os.replace(tmp, caminho_json)
+        if _github_push:
+            _github_push(caminho_json)
         logger.info("Movimentações manuais: %d registro(s) salvos.", len(registros))
     except Exception as exc:
         logger.error("Falha ao salvar movimentações manuais '%s': %s", caminho_json, exc)
@@ -1148,6 +1159,8 @@ def deletar_movimentacao_manual(indice: int, caminho_json: str) -> None:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(registros, f, ensure_ascii=False, indent=2, default=str)
         os.replace(tmp, caminho_json)
+        if _github_push:
+            _github_push(caminho_json)
     except Exception as exc:
         logger.error("Falha ao deletar movimentação manual '%s': %s", caminho_json, exc)
 
@@ -1169,7 +1182,7 @@ def extrair_bananas_pdf_upload(caminho_pdf: str, nome_original: str = "") -> lis
 # 8. Registro de caixas por loja
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CAIXAS_JSON = r"C:\Users\pesso\OneDrive\Documentos\benverde\MeuAppGerencia\dados\cache\caixas_lojas.json"
+_DEFAULT_CAIXAS_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados", "cache", "caixas_lojas.json")
 
 
 def salvar_registro_caixas(registro: dict, caminho_json: str = _DEFAULT_CAIXAS_JSON) -> None:
@@ -1198,6 +1211,8 @@ def salvar_registro_caixas(registro: dict, caminho_json: str = _DEFAULT_CAIXAS_J
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(existentes, f, ensure_ascii=False, indent=2, default=str)
         os.replace(tmp, caminho_json)
+        if _github_push:
+            _github_push(caminho_json)
         logger.info("Caixas: registro salvo para loja %s.", registro.get("loja", "?"))
     except Exception as exc:
         logger.error("Falha ao salvar caixas '%s': %s", caminho_json, exc)

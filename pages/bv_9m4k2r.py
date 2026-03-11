@@ -49,6 +49,11 @@ from auth import (
     rejeitar_usuario,
 )
 
+try:
+    from github_sync import push_file as _github_push, delete_file as _github_delete
+except ImportError:
+    _github_push = _github_delete = None
+
 
 # ---------------------------------------------------------------------------
 # Temas — Liquid Glass (escuro / claro)
@@ -1470,6 +1475,8 @@ def _salvar_pedidos_importados(df: pd.DataFrame, caminho_json: str) -> None:
     payload["Data"] = payload["Data"].apply(lambda d: d.isoformat() if pd.notna(d) else None)
     with open(caminho_json, "w", encoding="utf-8") as f:
         json.dump(payload.to_dict(orient="records"), f, ensure_ascii=False, indent=2)
+    if _github_push:
+        _github_push(caminho_json)
 
 
 def _df_de_upload(arquivo) -> pd.DataFrame:
@@ -1737,6 +1744,8 @@ def _limpar_cache_geral_pedidos() -> tuple[int, list[str]]:
         try:
             if os.path.exists(caminho):
                 os.remove(caminho)
+                if _github_delete:
+                    _github_delete(caminho)
                 removidos.append(caminho)
         except Exception as exc:
             erros.append(f"{caminho}: {exc}")
