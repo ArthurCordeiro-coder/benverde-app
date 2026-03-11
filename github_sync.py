@@ -13,6 +13,7 @@ import base64
 import logging
 import os
 import threading
+import time
 
 import requests
 
@@ -21,6 +22,8 @@ logger = logging.getLogger(__name__)
 _LOCK = threading.Lock()
 _SHA_CACHE: dict[str, str] = {}
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+_MIN_INTERVAL = 0.5  # segundos entre chamadas para evitar rajadas
+_last_call: float = 0.0
 
 _API = "https://api.github.com"
 
@@ -111,6 +114,12 @@ def push_file(local_path: str, commit_message: str = "") -> bool:
     url = f"{_API}/repos/{repo}/contents/{rpath}"
 
     with _LOCK:
+        # Throttle: respeitar intervalo minimo entre chamadas
+        global _last_call
+        elapsed = time.monotonic() - _last_call
+        if elapsed < _MIN_INTERVAL:
+            time.sleep(_MIN_INTERVAL - elapsed)
+
         sha = _SHA_CACHE.get(rpath) or _fetch_sha(token, repo, branch, rpath)
 
         payload: dict = {
@@ -132,6 +141,16 @@ def push_file(local_path: str, commit_message: str = "") -> bool:
                 payload.pop("sha", None)
             resp = requests.put(url, json=payload, headers=_headers(token), timeout=30)
 
+        _last_call = time.monotonic()
+
+        # Rate limit atingido
+        if resp.status_code in (429, 403):
+            logger.warning(
+                "github_sync: rate limit atingido ao enviar '%s' — HTTP %s",
+                rpath, resp.status_code,
+            )
+            return False
+
         if resp.status_code in (200, 201):
             _SHA_CACHE[rpath] = resp.json()["content"]["sha"]
             logger.info("github_sync: '%s' enviado com sucesso.", rpath)
@@ -142,8 +161,6 @@ def push_file(local_path: str, commit_message: str = "") -> bool:
             rpath, resp.status_code, resp.text[:200],
         )
         return False
-
-    return False
 
 
 def delete_file(local_path: str, commit_message: str = "") -> bool:
