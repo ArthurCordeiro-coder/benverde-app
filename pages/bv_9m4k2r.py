@@ -507,18 +507,13 @@ def _normalizar_funcionalidade(valor: str) -> str:
 
 
 def _registrar_usuario_safe(username: str, nome: str, senha: str, funcionalidade: str) -> tuple[bool, str]:
-    """Chama registrar_usuario com compatibilidade para versões antigas de auth.py."""
+    """Chama registrar_usuario com fallback para auth antigo (3 parâmetros)."""
     try:
-        params = inspect.signature(registrar_usuario).parameters
-    except (TypeError, ValueError):
-        params = {}
-
-    if "funcionalidade" in params or len(params) >= 4:
-        try:
-            return registrar_usuario(username, nome, senha, funcionalidade)
-        except TypeError:
-            # Fallback defensivo para ambientes com módulo legado em runtime.
-            pass
+        # Primeiro tenta assinatura nova (com funcionalidade).
+        return registrar_usuario(username, nome, senha, funcionalidade)
+    except TypeError:
+        # Compatibilidade com runtime legado que ainda expõe 3 parâmetros.
+        pass
 
     ok, msg = registrar_usuario(username, nome, senha)
     if ok and msg in {"pendente", "admin_criado"}:
