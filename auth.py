@@ -88,7 +88,10 @@ def salvar_lockouts(lockouts: dict) -> None:
 
 def get_user(username: str) -> dict | None:
     """Busca um usuário aprovado pelo username."""
-    return next((u for u in carregar_users() if u["username"] == username), None)
+    user = next((u for u in carregar_users() if u["username"] == username), None)
+    if user:
+        user.setdefault("funcionalidade", "administracao geral")
+    return user
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +146,12 @@ def verificar_login(username: str, senha: str) -> tuple[bool, str]:
         return True, "ok"
 
 
-def registrar_usuario(username: str, nome: str, senha: str) -> tuple[bool, str]:
+def registrar_usuario(
+    username: str,
+    nome: str,
+    senha: str,
+    funcionalidade: str = "administracao geral",
+) -> tuple[bool, str]:
     """
     Registra um novo usuário.
     Retorna (True, "admin_criado") | (True, "pendente") | (False, "motivo").
@@ -175,6 +183,7 @@ def registrar_usuario(username: str, nome: str, senha: str) -> tuple[bool, str]:
                 "senha_hash": hash_,
                 "is_admin":   True,
                 "criado_em":  agora_iso,
+                "funcionalidade": funcionalidade,
             })
             _save_json(_USERS_PATH, users)
             return True, "admin_criado"
@@ -186,6 +195,7 @@ def registrar_usuario(username: str, nome: str, senha: str) -> tuple[bool, str]:
             "salt":          salt,
             "senha_hash":    hash_,
             "solicitado_em": agora_iso,
+            "funcionalidade": funcionalidade,
         })
         _save_json(_PENDING_PATH, pending)
         return True, "pendente"
@@ -206,6 +216,7 @@ def aprovar_usuario(username: str) -> bool:
             "senha_hash": entry["senha_hash"],
             "is_admin":   False,
             "criado_em":  datetime.now(timezone.utc).isoformat(),
+            "funcionalidade": entry.get("funcionalidade", "administracao geral"),
         })
         _save_json(_USERS_PATH, users)
         _save_json(_PENDING_PATH, [p for p in pending if p["username"] != username])
