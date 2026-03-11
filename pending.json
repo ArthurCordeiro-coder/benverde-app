@@ -1,0 +1,10 @@
+[
+  {
+    "username": "Arthur_10",
+    "nome": "Arthur preços",
+    "salt": "96a5d78712dcddf4c7c217f7a550eb9f89aa6ffc430400493be2b9b30627d2fe",
+    "senha_hash": "ea30ab34079d0e1878685057b29f7eeedd7f12874203509c17469278d3bdce4b",
+    "solicitado_em": "2026-03-11T22:42:41.249090+00:00",
+    "funcionalidade": "busca de precos"
+  }
+]
