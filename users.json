@@ -8,12 +8,12 @@
     "criado_em": "2026-03-05T16:07:17.874953+00:00"
   },
   {
-    "username": "Arthur_10",
-    "nome": "Arthur preços",
-    "salt": "a7079d3dd3ad1b7caee8e8c14c5d0518f3ac34c126eb8cd569462f39af935942",
-    "senha_hash": "1074cb7d142497e9374b2228c471a37ac1a0807107923a0fd28bd52639a435d9",
+    "username": "Arthur_100",
+    "nome": "Arthur_10",
+    "salt": "5309082b2cbd54d59752d5e325e9fadcc48c4e2288cad257930057927bef002d",
+    "senha_hash": "d851b734b69c3ab10c3aa8d881b74d6c083e275d4eb8c51f4b0a1305393a3daf",
     "is_admin": false,
-    "criado_em": "2026-03-11T22:54:25.238936+00:00",
+    "criado_em": "2026-03-11T23:15:07.362243+00:00",
     "funcionalidade": "busca de precos"
   }
 ]
