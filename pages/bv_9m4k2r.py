@@ -492,6 +492,34 @@ st.markdown(
 # Tela de login — Liquid Glass
 # ---------------------------------------------------------------------------
 
+def _normalizar_funcionalidade(valor: str) -> str:
+    """Normaliza funcionalidade para persistência em auth."""
+    mapa = {
+        "administração geral": "administracao geral",
+        "administracao geral": "administracao geral",
+        "busca de preços": "busca de precos",
+        "busca de precos": "busca de precos",
+        "registro de caixas": "registro de caixas",
+    }
+    chave = str(valor or "").strip().lower()
+    return mapa.get(chave, "administracao geral")
+
+
+def _registrar_usuario_safe(username: str, nome: str, senha: str, funcionalidade: str) -> tuple[bool, str]:
+    """Chama registrar_usuario com fallback para auth antigo (3 parâmetros)."""
+    try:
+        # Primeiro tenta assinatura nova (com funcionalidade).
+        return registrar_usuario(username, nome, senha, funcionalidade)
+    except TypeError:
+        # Compatibilidade com runtime legado que ainda expõe 3 parâmetros.
+        pass
+
+    ok, msg = registrar_usuario(username, nome, senha)
+    if ok and msg in {"pendente", "admin_criado"}:
+        msg = f"{msg}|funcionalidade_nao_suportada"
+    return ok, msg
+
+
 def _render_pagina_login() -> None:
     """Renderiza a tela de login/cadastro com visual Liquid Glass + Benverde."""
     st.markdown("""
@@ -559,6 +587,20 @@ def _render_pagina_login() -> None:
         font-size: 0.82rem !important;
         font-weight: 500 !important;
         letter-spacing: 0.04em !important;
+    }
+
+    .stSelectbox label,
+    .stSelectbox > label {
+        color: rgba(255, 255, 255, 0.75) !important;
+        font-size: 0.82rem !important;
+        font-weight: 500 !important;
+        letter-spacing: 0.04em !important;
+    }
+    .stSelectbox [data-baseweb="select"] > div {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 12px !important;
+        color: white !important;
     }
 
     /* 6. BOTÃO PRIMÁRIO — verde Benverde */
@@ -684,8 +726,14 @@ def _render_pagina_login() -> None:
             if username_in and senha_in:
                 ok, msg = verificar_login(username_in.strip(), senha_in)
                 if ok:
+                    username_ok = username_in.strip()
                     st.session_state["autenticado"]     = True
-                    st.session_state["username_logado"] = username_in.strip()
+                    st.session_state["username_logado"] = username_ok
+                    _user = get_user(username_ok) or {}
+                    _func = _user.get("funcionalidade", "administracao geral")
+                    st.session_state["funcionalidade_logado"] = _func
+                    if _func == "busca de precos":
+                        st.switch_page("pages/busca_precos.py")
                     st.rerun()
                 else:
                     st.error(msg)
@@ -695,6 +743,11 @@ def _render_pagina_login() -> None:
 
     with aba_cadastro:
         nome_in  = st.text_input("Nome completo", key="cad_nome", placeholder="Maria da Silva")
+        funcionalidade_in = st.selectbox(
+            "Qual a funcionalidade necessária?",
+            ["Administração geral", "Busca de preços", "Registro de caixas"],
+            key="cad_funcionalidade",
+        )
         user2_in = st.text_input("Username",      key="cad_user", placeholder="maria_silva")
         sen1_in  = st.text_input("Senha",          type="password", key="cad_sen1", placeholder="••••••")
         sen2_in  = st.text_input("Confirmar senha", type="password", key="cad_sen2", placeholder="••••••")
@@ -704,11 +757,20 @@ def _render_pagina_login() -> None:
             elif sen1_in != sen2_in:
                 st.error("As senhas não coincidem.")
             else:
-                ok, msg = registrar_usuario(user2_in.strip(), nome_in.strip(), sen1_in)
-                if ok and msg == "admin_criado":
+                ok, msg = _registrar_usuario_safe(
+                    user2_in.strip(),
+                    nome_in.strip(),
+                    sen1_in,
+                    _normalizar_funcionalidade(funcionalidade_in),
+                )
+                if ok and msg.startswith("admin_criado"):
                     st.success("Conta criada! Faça login.")
-                elif ok and msg == "pendente":
+                    if "funcionalidade_nao_suportada" in msg:
+                        st.warning("A versão atual do auth não suporta funcionalidade no cadastro.")
+                elif ok and msg.startswith("pendente"):
                     st.info("Solicitação enviada! Aguarde aprovação do administrador.")
+                    if "funcionalidade_nao_suportada" in msg:
+                        st.warning("A versão atual do auth não suporta funcionalidade no cadastro.")
                 else:
                     st.error(msg)
 
@@ -718,11 +780,21 @@ def _render_pagina_login() -> None:
 # ---------------------------------------------------------------------------
 
 if "autenticado" not in st.session_state:
-    st.session_state["autenticado"]     = False
+    st.session_state["autenticado"] = False
+if "username_logado" not in st.session_state:
     st.session_state["username_logado"] = None
+if "funcionalidade_logado" not in st.session_state:
+    st.session_state["funcionalidade_logado"] = "administracao geral"
 
 if not st.session_state["autenticado"]:
     _render_pagina_login()
+    st.stop()
+
+_user_gate = get_user(st.session_state.get("username_logado", "") or "")
+_func_gate = (_user_gate or {}).get("funcionalidade", "administracao geral")
+st.session_state["funcionalidade_logado"] = _func_gate
+if _func_gate == "busca de precos":
+    st.switch_page("pages/busca_precos.py")
     st.stop()
 
 
@@ -1124,18 +1196,23 @@ def _render_sidebar() -> None:
         _user_logado = get_user(st.session_state.get("username_logado", ""))
         if _user_logado and _user_logado.get("is_admin"):
             _pendentes = carregar_pending()
-            if _pendentes:
-                with st.expander(f"👤 Aprovações pendentes ({len(_pendentes)})"):
-                    for _p in _pendentes:
-                        _data = _p.get("solicitado_em", "")[:10]
-                        st.markdown(f"**{_p['nome']}** (`{_p['username']}`) — {_data}")
-                        _col_ap, _col_rej = st.columns(2)
-                        if _col_ap.button("✅ Aprovar", key=f"ap_{_p['username']}", use_container_width=True):
-                            aprovar_usuario(_p["username"])
-                            st.rerun()
-                        if _col_rej.button("❌ Rejeitar", key=f"rej_{_p['username']}", use_container_width=True):
-                            rejeitar_usuario(_p["username"])
-                            st.rerun()
+            with st.expander(f"👤 Aprovações pendentes ({len(_pendentes)})"):
+                if not _pendentes:
+                    st.caption("Sem solicitações pendentes no momento.")
+                for _p in _pendentes:
+                    _data = _p.get("solicitado_em", "")[:10]
+                    _func_p = _p.get("funcionalidade", "administracao geral")
+                    st.markdown(
+                        f"**{_p['nome']}** (`{_p['username']}`) — {_data} · "
+                        f"Funcionalidade: `{_func_p}`"
+                    )
+                    _col_ap, _col_rej = st.columns(2)
+                    if _col_ap.button("✅ Aprovar", key=f"ap_{_p['username']}", use_container_width=True):
+                        aprovar_usuario(_p["username"])
+                        st.rerun()
+                    if _col_rej.button("❌ Rejeitar", key=f"rej_{_p['username']}", use_container_width=True):
+                        rejeitar_usuario(_p["username"])
+                        st.rerun()
 
         st.markdown("---")
         st.caption("Mita IA · v1.51")
