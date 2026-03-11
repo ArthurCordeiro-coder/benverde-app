@@ -11,6 +11,11 @@ import secrets
 import threading
 from datetime import datetime, timedelta, timezone
 
+try:
+    from github_sync import push_file as _github_push
+except ImportError:
+    _github_push = None
+
 # ---------------------------------------------------------------------------
 # Constantes
 # ---------------------------------------------------------------------------
@@ -43,6 +48,8 @@ def _load_json(path: str, default):
 def _save_json(path: str, data) -> None:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    if _github_push:
+        _github_push(path)
 
 
 # ---------------------------------------------------------------------------
