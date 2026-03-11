@@ -6,5 +6,13 @@
     "senha_hash": "a5fd01153ec823d46867c8c04adf98ab3486507ea0ee84b24bf6e085d9848b3c",
     "solicitado_em": "2026-03-11T23:14:40.759729+00:00",
     "funcionalidade": "administracao geral"
+  },
+  {
+    "username": "Arthur_100",
+    "nome": "Arthur_10",
+    "salt": "5309082b2cbd54d59752d5e325e9fadcc48c4e2288cad257930057927bef002d",
+    "senha_hash": "d851b734b69c3ab10c3aa8d881b74d6c083e275d4eb8c51f4b0a1305393a3daf",
+    "solicitado_em": "2026-03-11T23:14:50.594299+00:00",
+    "funcionalidade": "busca de precos"
   }
 ]
