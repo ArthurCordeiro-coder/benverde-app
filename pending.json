@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "username": "Arthur_10",
+    "nome": "Arthur_10",
+    "salt": "18da963859623f154ed1febff6b3c75482d2e4d8cee5912520c1bc40b4ecb8a7",
+    "senha_hash": "a5fd01153ec823d46867c8c04adf98ab3486507ea0ee84b24bf6e085d9848b3c",
+    "solicitado_em": "2026-03-11T23:14:40.759729+00:00",
+    "funcionalidade": "administracao geral"
+  }
+]
