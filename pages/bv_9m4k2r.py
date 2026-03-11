@@ -20,6 +20,7 @@ import logging
 import re
 import tempfile
 import zipfile
+import inspect
 from datetime import datetime
 
 import pandas as pd
@@ -505,6 +506,26 @@ def _normalizar_funcionalidade(valor: str) -> str:
     return mapa.get(chave, "administracao geral")
 
 
+def _registrar_usuario_safe(username: str, nome: str, senha: str, funcionalidade: str) -> tuple[bool, str]:
+    """Chama registrar_usuario com compatibilidade para versões antigas de auth.py."""
+    try:
+        params = inspect.signature(registrar_usuario).parameters
+    except (TypeError, ValueError):
+        params = {}
+
+    if "funcionalidade" in params or len(params) >= 4:
+        try:
+            return registrar_usuario(username, nome, senha, funcionalidade)
+        except TypeError:
+            # Fallback defensivo para ambientes com módulo legado em runtime.
+            pass
+
+    ok, msg = registrar_usuario(username, nome, senha)
+    if ok and msg in {"pendente", "admin_criado"}:
+        msg = f"{msg}|funcionalidade_nao_suportada"
+    return ok, msg
+
+
 def _render_pagina_login() -> None:
     """Renderiza a tela de login/cadastro com visual Liquid Glass + Benverde."""
     st.markdown("""
@@ -742,16 +763,20 @@ def _render_pagina_login() -> None:
             elif sen1_in != sen2_in:
                 st.error("As senhas não coincidem.")
             else:
-                ok, msg = registrar_usuario(
+                ok, msg = _registrar_usuario_safe(
                     user2_in.strip(),
                     nome_in.strip(),
                     sen1_in,
                     _normalizar_funcionalidade(funcionalidade_in),
                 )
-                if ok and msg == "admin_criado":
+                if ok and msg.startswith("admin_criado"):
                     st.success("Conta criada! Faça login.")
-                elif ok and msg == "pendente":
+                    if "funcionalidade_nao_suportada" in msg:
+                        st.warning("A versão atual do auth não suporta funcionalidade no cadastro.")
+                elif ok and msg.startswith("pendente"):
                     st.info("Solicitação enviada! Aguarde aprovação do administrador.")
+                    if "funcionalidade_nao_suportada" in msg:
+                        st.warning("A versão atual do auth não suporta funcionalidade no cadastro.")
                 else:
                     st.error(msg)
 
