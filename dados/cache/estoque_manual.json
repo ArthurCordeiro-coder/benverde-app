@@ -1231,5 +1231,23 @@
     "unidade": "KG",
     "loja": "Loja 36",
     "arquivo": "manual"
+  },
+  {
+    "data": "2026-03-12T16:43:27.307847",
+    "tipo": "entrada",
+    "produto": "BANANA DA TERRA",
+    "quant": 400.0,
+    "unidade": "KG",
+    "loja": "Entrada",
+    "arquivo": "manual"
+  },
+  {
+    "data": "2026-03-12T16:43:27.307847",
+    "tipo": "entrada",
+    "produto": "BANANA MAÇÃ",
+    "quant": 240.0,
+    "unidade": "KG",
+    "loja": "Entrada",
+    "arquivo": "manual"
   }
 ]
