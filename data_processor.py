@@ -939,8 +939,15 @@ def calcular_estoque(
 
 def load_pedidos_pdfs(pasta_pdfs: str = "", caminho_cache: str = "") -> pd.DataFrame:
     """Carrega NF-e PDFs com ProcessPoolExecutor e cache incremental."""
-    if not pasta_pdfs or not os.path.isdir(pasta_pdfs):
-        logger.error("Pasta de pedidos NF-e não encontrada: '%s'", pasta_pdfs)
+    if not pasta_pdfs:
+        logger.warning("Pasta de pedidos NF-e não informada.")
+        return pd.DataFrame()
+    if not os.path.isdir(pasta_pdfs):
+        try:
+            os.makedirs(pasta_pdfs, exist_ok=True)
+        except Exception:
+            pass
+        logger.warning("Pasta de pedidos NF-e não encontrada: '%s'", pasta_pdfs)
         return pd.DataFrame()
 
     cache     = _carregar_cache(caminho_cache, "cache_pedidos")
@@ -1368,7 +1375,14 @@ def load_pedidos_semar(pasta: str, caminho_cache: str = "") -> pd.DataFrame:
     """
     _colunas = ["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"]
 
-    if not pasta or not os.path.isdir(pasta):
+    if not pasta:
+        logger.warning("[SEMAR] Pasta não informada.")
+        return pd.DataFrame(columns=_colunas)
+    if not os.path.isdir(pasta):
+        try:
+            os.makedirs(pasta, exist_ok=True)
+        except Exception:
+            pass
         logger.warning("[SEMAR] Pasta inválida ou inexistente: '%s'", pasta)
         return pd.DataFrame(columns=_colunas)
 

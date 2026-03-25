@@ -1,7 +1,6 @@
 import os
 import threading
 from contextlib import contextmanager
-from datetime import datetime
 
 import psycopg
 from psycopg import sql
@@ -164,9 +163,6 @@ def _ensure_tables():
                 cur.execute(stmt)
 
 
-    _ensure_tables()
-    _ensure_cache_columns()
-
 _CACHE_TABLES = {"cache_estoque", "cache_pedidos"}
 
 
@@ -189,6 +185,22 @@ def _ensure_cache_columns():
                             definition=sql.SQL(definition),
                         )
                     )
+                cur.execute(
+                    sql.SQL(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS {idx} ON {table} (key)"
+                    ).format(
+                        idx=_format_identifier(f"{table}_key_idx"),
+                        table=_format_identifier(table),
+                    )
+                )
+
+
+def _ensure_db_structures():
+    _ensure_tables()
+    _ensure_cache_columns()
+
+
+_ensure_db_structures()
 
 
 def fetch_cache(table_name: str) -> dict:
@@ -197,7 +209,9 @@ def fetch_cache(table_name: str) -> dict:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                sql.SQL("SELECT key, payload FROM {table}").format(table=_format_identifier(table_name))
+                sql.SQL(
+                    "SELECT key, payload FROM {table} WHERE key IS NOT NULL AND payload IS NOT NULL"
+                ).format(table=_format_identifier(table_name))
             )
             return {row[0]: row[1] for row in cur.fetchall()}
 
