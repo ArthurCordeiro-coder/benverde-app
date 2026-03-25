@@ -23,10 +23,20 @@ from typing import Optional
 import pandas as pd
 import pdfplumber
 
-try:
-    from github_sync import push_file as _github_push
-except ImportError:
-    _github_push = None
+from db import (
+    clear_cache_table,
+    delete_movimentacao,
+    fetch_cache,
+    fetch_caixas,
+    fetch_movimentacoes,
+    fetch_pedidos_importados,
+    insert_caixa,
+    insert_movimentacoes,
+    load_metas,
+    replace_metas,
+    save_pedidos_importados,
+    upsert_cache,
+)
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -239,30 +249,32 @@ def parse_data_arquivo(nome_arq: str) -> Optional[datetime]:
 # Cache incremental
 # ---------------------------------------------------------------------------
 
-def _carregar_cache(caminho_cache: str) -> dict:
-    """Carrega cache JSON; retorna {} se ausente ou inválido."""
-    if not caminho_cache or not os.path.isfile(caminho_cache):
-        return {}
+def _cache_table_for_path(caminho_cache: str, fallback: str) -> str:
+    if not caminho_cache:
+        return fallback
+    path = caminho_cache.lower()
+    if "cache_estoque" in path:
+        return "cache_estoque"
+    if "cache_pedidos" in path or "cache_semar" in path:
+        return "cache_pedidos"
+    return fallback
+
+
+def _carregar_cache(caminho_cache: str, fallback: str) -> dict:
+    table = _cache_table_for_path(caminho_cache, fallback)
     try:
-        with open(caminho_cache, encoding="utf-8") as f:
-            return json.load(f)
+        return fetch_cache(table)
     except Exception as exc:
         logger.warning("Falha ao carregar cache '%s': %s", caminho_cache, exc)
         return {}
 
 
-def _salvar_cache(cache: dict, caminho_cache: str) -> None:
-    """Salva cache JSON de forma atômica."""
-    if not caminho_cache:
+def _salvar_cache(cache: dict, caminho_cache: str, fallback: str) -> None:
+    if not cache:
         return
+    table = _cache_table_for_path(caminho_cache, fallback)
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(caminho_cache)), exist_ok=True)
-        tmp = caminho_cache + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(cache, f, ensure_ascii=False, default=str, indent=2)
-        os.replace(tmp, caminho_cache)
-        if _github_push:
-            _github_push(caminho_cache)
+        upsert_cache(table, cache)
     except Exception as exc:
         logger.error("Falha ao salvar cache '%s': %s", caminho_cache, exc)
 
@@ -801,7 +813,7 @@ def calcular_estoque(
     usar_threads:   bool = True,
 ) -> tuple:
     """Calcula saldo de estoque de bananas com cache incremental e multiprocessing."""
-    cache     = _carregar_cache(caminho_cache)
+    cache     = _carregar_cache(caminho_cache, "cache_estoque")
     historico = []
 
     tarefas = []
@@ -881,7 +893,7 @@ def calcular_estoque(
                 concluidos += 1
                 if concluidos % SALVAR_CADA == 0:
                     cache.update(pendente)
-                    _salvar_cache(cache, caminho_cache)
+                    _salvar_cache(cache, caminho_cache, "cache_estoque")
                     pendente = {}
                     logger.info("Estoque: %d/%d PDFs.", concluidos, len(tarefas_novas))
 
@@ -913,7 +925,7 @@ def calcular_estoque(
 
         if pendente:
             cache.update(pendente)
-            _salvar_cache(cache, caminho_cache)
+            _salvar_cache(cache, caminho_cache, "cache_estoque")
 
     historico.sort(key=lambda x: (x["data"] is None, x["data"] or datetime.min, x["tipo"]))
     saldo = sum(i["quant"] if i["tipo"] == "entrada" else -i["quant"] for i in historico)
@@ -931,7 +943,7 @@ def load_pedidos_pdfs(pasta_pdfs: str = "", caminho_cache: str = "") -> pd.DataF
         logger.error("Pasta de pedidos NF-e não encontrada: '%s'", pasta_pdfs)
         return pd.DataFrame()
 
-    cache     = _carregar_cache(caminho_cache)
+    cache     = _carregar_cache(caminho_cache, "cache_pedidos")
     registros = []
 
     pdfs = glob.glob(os.path.join(pasta_pdfs, "*.pdf"))
@@ -1011,7 +1023,7 @@ def load_pedidos_pdfs(pasta_pdfs: str = "", caminho_cache: str = "") -> pd.DataF
                 concluidos += 1
                 if concluidos % SALVAR_CADA == 0:
                     cache.update(pendente)
-                    _salvar_cache(cache, caminho_cache)
+                    _salvar_cache(cache, caminho_cache, "cache_pedidos")
                     pendente = {}
                     logger.info("Progresso: %d/%d PDFs | cache salvo.", concluidos, len(pdfs_novos))
 
@@ -1050,7 +1062,7 @@ def load_pedidos_pdfs(pasta_pdfs: str = "", caminho_cache: str = "") -> pd.DataF
 
         if pendente:
             cache.update(pendente)
-            _salvar_cache(cache, caminho_cache)
+            _salvar_cache(cache, caminho_cache, "cache_pedidos")
 
         logger.info("Concluído: %d/%d PDFs.", concluidos, len(pdfs_novos))
 
@@ -1071,31 +1083,20 @@ def load_pedidos_pdfs(pasta_pdfs: str = "", caminho_cache: str = "") -> pd.DataF
 # ---------------------------------------------------------------------------
 
 def load_metas_local(caminho_json: str) -> pd.DataFrame:
-    if not caminho_json or not os.path.isfile(caminho_json):
+    lista = load_metas()
+    if not lista:
         return pd.DataFrame(columns=["Produto", "Meta"])
-    try:
-        with open(caminho_json, encoding="utf-8") as f:
-            data = json.load(f)
-        df = pd.DataFrame(data)
-        if df.empty or "Produto" not in df.columns or "Meta" not in df.columns:
-            return pd.DataFrame(columns=["Produto", "Meta"])
-        df["Produto"] = df["Produto"].astype(str).str.strip().str.upper()
-        df["Meta"]    = pd.to_numeric(df["Meta"], errors="coerce").fillna(0).astype(int)
-        return df.reset_index(drop=True)
-    except Exception as exc:
-        logger.error("Falha ao carregar metas '%s': %s", caminho_json, exc)
+    df = pd.DataFrame(lista)
+    if df.empty or "Produto" not in df.columns or "Meta" not in df.columns:
         return pd.DataFrame(columns=["Produto", "Meta"])
+    df["Produto"] = df["Produto"].astype(str).str.strip().str.upper()
+    df["Meta"]    = pd.to_numeric(df["Meta"], errors="coerce").fillna(0).astype(int)
+    return df.reset_index(drop=True)
 
 
 def salvar_metas_local(lista_metas: list, caminho_json: str) -> None:
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
-        tmp = caminho_json + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(lista_metas, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, caminho_json)
-        if _github_push:
-            _github_push(caminho_json)
+        replace_metas(lista_metas)
         logger.info("Metas salvas: %d item(s).", len(lista_metas))
     except Exception as exc:
         logger.error("Falha ao salvar metas '%s': %s", caminho_json, exc)
@@ -1106,61 +1107,33 @@ def salvar_metas_local(lista_metas: list, caminho_json: str) -> None:
 # ---------------------------------------------------------------------------
 
 def salvar_movimentacao_manual(registros: list, caminho_json: str) -> None:
-    """Acumula registros no JSON (não sobrescreve — faz append).
-
-    Cada registro deve ter:
-      data (str ISO), tipo ('entrada'|'saida'), produto (str),
-      quant (float), unidade (str), loja (str), arquivo (str, default 'manual')
-    """
-    existentes = load_movimentacoes_manuais(caminho_json)
+    """Persiste registros no banco (semelhante ao append anterior)."""
     agora = datetime.now().isoformat()
     for reg in registros:
         reg.setdefault("data", agora)
         reg.setdefault("arquivo", "manual")
         reg.setdefault("unidade", "KG")
         reg.setdefault("loja", "")
-    existentes.extend(registros)
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
-        tmp = caminho_json + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(existentes, f, ensure_ascii=False, indent=2, default=str)
-        os.replace(tmp, caminho_json)
-        if _github_push:
-            _github_push(caminho_json)
+        insert_movimentacoes(registros)
         logger.info("Movimentações manuais: %d registro(s) salvos.", len(registros))
     except Exception as exc:
         logger.error("Falha ao salvar movimentações manuais '%s': %s", caminho_json, exc)
 
 
 def load_movimentacoes_manuais(caminho_json: str) -> list:
-    """Carrega lista de movimentações manuais. Retorna [] se não existir."""
-    if not caminho_json or not os.path.isfile(caminho_json):
-        return []
+    """Carrega lista de movimentações manuais persistidas no banco."""
     try:
-        with open(caminho_json, encoding="utf-8") as f:
-            dados = json.load(f)
-        if not isinstance(dados, list):
-            return []
-        return dados
+        return fetch_movimentacoes()
     except Exception as exc:
         logger.error("Falha ao carregar movimentações manuais '%s': %s", caminho_json, exc)
         return []
 
 
-def deletar_movimentacao_manual(indice: int, caminho_json: str) -> None:
-    """Remove o registro na posição `indice` da lista de movimentações."""
-    registros = load_movimentacoes_manuais(caminho_json)
-    if 0 <= indice < len(registros):
-        registros.pop(indice)
+def deletar_movimentacao_manual(entry_id: int, caminho_json: str) -> None:
+    """Remove o registro identificado pelo ID."""
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
-        tmp = caminho_json + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(registros, f, ensure_ascii=False, indent=2, default=str)
-        os.replace(tmp, caminho_json)
-        if _github_push:
-            _github_push(caminho_json)
+        delete_movimentacao(entry_id)
     except Exception as exc:
         logger.error("Falha ao deletar movimentação manual '%s': %s", caminho_json, exc)
 
@@ -1186,62 +1159,48 @@ _DEFAULT_CAIXAS_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 
 
 def salvar_registro_caixas(registro: dict, caminho_json: str = _DEFAULT_CAIXAS_JSON) -> None:
-    """Acumula registro de caixas no JSON (append, não sobrescreve).
-
-    Estrutura do registro:
-      data (str ISO date), loja (str), n_loja (int),
-      caixas_benverde (int), caixas_ccj (int), caixas_bananas (int),
-      total (int), entregue (str: 'sim'|'não')
-    """
-    if os.path.isfile(caminho_json):
-        try:
-            with open(caminho_json, encoding="utf-8") as f:
-                existentes = json.load(f)
-            if not isinstance(existentes, list):
-                existentes = []
-        except Exception:
-            existentes = []
-    else:
-        existentes = []
-
-    existentes.append(registro)
+    """Salva registro de caixas no banco."""
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
-        tmp = caminho_json + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(existentes, f, ensure_ascii=False, indent=2, default=str)
-        os.replace(tmp, caminho_json)
-        if _github_push:
-            _github_push(caminho_json)
+        insert_caixa(registro)
         logger.info("Caixas: registro salvo para loja %s.", registro.get("loja", "?"))
     except Exception as exc:
         logger.error("Falha ao salvar caixas '%s': %s", caminho_json, exc)
 
 
 def load_registros_caixas(caminho_json: str = _DEFAULT_CAIXAS_JSON) -> pd.DataFrame:
-    """Carrega todos os registros de caixas. Retorna DataFrame vazio se não existir.
-
-    Colunas retornadas (na ordem da tabela de referência):
-      data | loja | n_loja | caixas_benverde | caixas_ccj | caixas_bananas | total | entregue
-    """
-    _colunas = ["data", "loja", "n_loja", "caixas_benverde",
-                "caixas_ccj", "ccj_banca", "ccj_mercadoria", "ccj_retirada",
-                "caixas_bananas", "total", "entregue"]
-    if not caminho_json or not os.path.isfile(caminho_json):
-        return pd.DataFrame(columns=_colunas)
+    """Carrega todos os registros de caixas. Retorna DataFrame vazio se não existir."""
+    _colunas = [
+        "data",
+        "loja",
+        "n_loja",
+        "caixas_benverde",
+        "caixas_ccj",
+        "ccj_banca",
+        "ccj_mercadoria",
+        "ccj_retirada",
+        "caixas_bananas",
+        "total",
+        "entregue",
+    ]
     try:
-        with open(caminho_json, encoding="utf-8") as f:
-            dados = json.load(f)
-        if not isinstance(dados, list) or not dados:
+        registros = fetch_caixas()
+        if not registros:
             return pd.DataFrame(columns=_colunas)
-        df = pd.DataFrame(dados)
+        df = pd.DataFrame(registros)
         for col in _colunas:
             if col not in df.columns:
                 df[col] = None
         df = df[_colunas].copy()
         df["n_loja"] = pd.to_numeric(df["n_loja"], errors="coerce").fillna(0).astype(int)
-        for col in ["caixas_benverde", "caixas_ccj", "ccj_banca", "ccj_mercadoria",
-                    "ccj_retirada", "caixas_bananas", "total"]:
+        for col in [
+            "caixas_benverde",
+            "caixas_ccj",
+            "ccj_banca",
+            "ccj_mercadoria",
+            "ccj_retirada",
+            "caixas_bananas",
+            "total",
+        ]:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
         return df
     except Exception as exc:
@@ -1417,7 +1376,7 @@ def load_pedidos_semar(pasta: str, caminho_cache: str = "") -> pd.DataFrame:
     if not pdfs:
         return pd.DataFrame(columns=_colunas)
 
-    cache     = _carregar_cache(caminho_cache)
+    cache     = _carregar_cache(caminho_cache, "cache_pedidos")
     registros: list = []
     pdfs_novos: list = []
 
@@ -1465,7 +1424,7 @@ def load_pedidos_semar(pasta: str, caminho_cache: str = "") -> pd.DataFrame:
                     "valor_unit":  row["VALOR UNIT"],
                 })
         cache.update(pendente)
-        _salvar_cache(cache, caminho_cache)
+        _salvar_cache(cache, caminho_cache, "cache_pedidos")
         logger.info("[SEMAR] %d PDF(s) novos processados.", len(pdfs_novos))
 
     if not registros:

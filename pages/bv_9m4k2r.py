@@ -40,6 +40,7 @@ from data_processor import (
     _worker_pedido,
     extrair_pedido_semar,
 )
+from db import clear_cache_table, fetch_pedidos_importados, save_pedidos_importados
 from claude_chat import chat_com_grok, chat_com_grok_historico, extrair_metas_de_imagem, extrair_metas_de_planilha
 from auth import (
     verificar_login,
@@ -49,11 +50,6 @@ from auth import (
     aprovar_usuario,
     rejeitar_usuario,
 )
-
-try:
-    from github_sync import push_file as _github_push, delete_file as _github_delete
-except ImportError:
-    _github_push = _github_delete = None
 
 
 # ---------------------------------------------------------------------------
@@ -1530,16 +1526,14 @@ def _normalizar_df_pedidos(df: pd.DataFrame) -> pd.DataFrame:
     return novo[["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"]]
 
 
+
 def _carregar_pedidos_importados(caminho_json: str) -> pd.DataFrame:
-    """Carrega pedidos importados manualmente (CSV/PDF/ZIP) persistidos em JSON."""
-    if not caminho_json or not os.path.isfile(caminho_json):
+    """Carrega pedidos importados manualmente persistidos no banco."""
+    registros = fetch_pedidos_importados()
+    if not registros:
         return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
     try:
-        with open(caminho_json, encoding="utf-8") as f:
-            data = json.load(f)
-        if not isinstance(data, list):
-            return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
-        return _normalizar_df_pedidos(pd.DataFrame(data))
+        return _normalizar_df_pedidos(pd.DataFrame(registros))
     except Exception as exc:
         logger.warning("Falha ao carregar pedidos importados '%s': %s", caminho_json, exc)
         return pd.DataFrame(columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"])
@@ -1547,14 +1541,13 @@ def _carregar_pedidos_importados(caminho_json: str) -> pd.DataFrame:
 
 def _salvar_pedidos_importados(df: pd.DataFrame, caminho_json: str) -> None:
     """Persiste pedidos importados para que sobrevivam ao botão Atualizar Dados."""
-    os.makedirs(os.path.dirname(os.path.abspath(caminho_json)), exist_ok=True)
     df_norm = _normalizar_df_pedidos(df)
     payload = df_norm.copy()
     payload["Data"] = payload["Data"].apply(lambda d: d.isoformat() if pd.notna(d) else None)
-    with open(caminho_json, "w", encoding="utf-8") as f:
-        json.dump(payload.to_dict(orient="records"), f, ensure_ascii=False, indent=2)
-    if _github_push:
-        _github_push(caminho_json)
+    try:
+        save_pedidos_importados(payload.to_dict(orient="records"))
+    except Exception as exc:
+        logger.warning("Falha ao salvar pedidos importados '%s': %s", caminho_json, exc)
 
 
 def _df_de_upload(arquivo) -> pd.DataFrame:
@@ -1809,24 +1802,23 @@ def _render_form_metas() -> None:
 
 def _limpar_cache_geral_pedidos() -> tuple[int, list[str]]:
     """Limpa caches/artefatos de pedidos para nova carga de informações."""
-    caminhos = [
-        st.session_state.get("path_cache_pedidos"),
-        st.session_state.get("path_cache_semar"),
-        st.session_state.get("path_pedidos_upload"),
-    ]
     removidos = []
     erros = []
-    for caminho in caminhos:
-        if not caminho:
-            continue
-        try:
-            if os.path.exists(caminho):
-                os.remove(caminho)
-                if _github_delete:
-                    _github_delete(caminho)
-                removidos.append(caminho)
-        except Exception as exc:
-            erros.append(f"{caminho}: {exc}")
+    try:
+        clear_cache_table("cache_pedidos")
+        removidos.append("cache_pedidos")
+    except Exception as exc:
+        erros.append(f"cache_pedidos: {exc}")
+    try:
+        clear_cache_table("cache_estoque")
+        removidos.append("cache_estoque")
+    except Exception as exc:
+        erros.append(f"cache_estoque: {exc}")
+    try:
+        save_pedidos_importados([])
+        removidos.append("pedidos_importados")
+    except Exception as exc:
+        erros.append(f"pedidos_importados: {exc}")
 
     st.session_state["pedidos"] = pd.DataFrame(
         columns=["Data", "Loja", "Produto", "UNID", "QUANT", "VALOR TOTAL", "VALOR UNIT"]

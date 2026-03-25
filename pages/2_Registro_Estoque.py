@@ -5,7 +5,7 @@ Página isolada para registro manual de estoque de bananas.
 Acesso via: http://localhost:8501/Registro_Estoque
 
 NÃO acessa session_state de app.py nem dados de vendas/preços.
-Única dependência externa: data_processor.py (leitura/escrita do JSON de estoque).
+Única dependência externa: data_processor.py (persistência via banco Neon).
 """
 
 import os
@@ -593,8 +593,8 @@ try:
             cols[3].write(f"{float(r.get('quant', 0)):,.1f}")
             cols[4].write(r.get("unidade", ""))
             cols[5].write(r.get("loja", ""))
-            if cols[6].button("🗑", key=f"del_reg_{idx_global}", help="Deletar registro"):
-                deletar_movimentacao_manual(idx_global, caminho_json)
+        if cols[6].button("🗑", key=f"del_reg_{idx_global}", help="Deletar registro"):
+            deletar_movimentacao_manual(r.get("id"), caminho_json)
                 st.rerun()
 
         st.caption(f"Total hoje: {len(hoje_registros)} registro(s)")

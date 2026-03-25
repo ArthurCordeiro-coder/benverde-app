@@ -16,7 +16,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from data_processor import salvar_registro_caixas, load_registros_caixas, _DEFAULT_CAIXAS_JSON
+from data_processor import salvar_registro_caixas, load_registros_caixas
 
 # ---------------------------------------------------------------------------
 # Configuração da página
@@ -238,7 +238,7 @@ if submitted:
             "entregue":        entregue,
         }
         try:
-            salvar_registro_caixas(registro, _DEFAULT_CAIXAS_JSON)
+            salvar_registro_caixas(registro)
             st.success("✅ Registro salvo!")
             st.rerun()
         except Exception as exc:
@@ -251,7 +251,7 @@ st.markdown("---")
 st.markdown(f"#### 📋 Últimos registros — {nome_loja}")
 
 try:
-    df_todos = load_registros_caixas(_DEFAULT_CAIXAS_JSON)
+    df_todos = load_registros_caixas()
     if not df_todos.empty:
         df_loja = df_todos[df_todos["n_loja"] == n_loja].copy()
         df_loja = df_loja.sort_values("data", ascending=False).head(10)
