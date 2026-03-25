@@ -164,9 +164,31 @@ def _ensure_tables():
                 cur.execute(stmt)
 
 
-_ensure_tables()
+    _ensure_tables()
+    _ensure_cache_columns()
 
 _CACHE_TABLES = {"cache_estoque", "cache_pedidos"}
+
+
+def _ensure_cache_columns():
+    cache_columns = {
+        "key": "TEXT",
+        "payload": "JSONB",
+        "updated_at": "TIMESTAMPTZ DEFAULT now()",
+    }
+    for table in _CACHE_TABLES | {"pedidos_importados"}:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                for column, definition in cache_columns.items():
+                    cur.execute(
+                        sql.SQL(
+                            "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {definition}"
+                        ).format(
+                            table=_format_identifier(table),
+                            column=_format_identifier(column),
+                            definition=sql.SQL(definition),
+                        )
+                    )
 
 
 def fetch_cache(table_name: str) -> dict:
