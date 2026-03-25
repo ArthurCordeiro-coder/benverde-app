@@ -595,7 +595,7 @@ try:
             cols[5].write(r.get("loja", ""))
         if cols[6].button("🗑", key=f"del_reg_{idx_global}", help="Deletar registro"):
             deletar_movimentacao_manual(r.get("id"), caminho_json)
-                st.rerun()
+            st.rerun()
 
         st.caption(f"Total hoje: {len(hoje_registros)} registro(s)")
     else:
