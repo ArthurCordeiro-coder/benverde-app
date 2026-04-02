@@ -21,7 +21,7 @@ import re
 import tempfile
 import zipfile
 import inspect
-from datetime import datetime
+from datetime import date, datetime
 
 import pandas as pd
 import streamlit as st
@@ -1110,13 +1110,32 @@ def _cor_preco(preco, referencia) -> str:
     return ""
 
 
+def _normalizar_data_iso(valor) -> str:
+    """Normaliza valores de data para o formato ISO usado nos filtros."""
+    if valor is None or pd.isna(valor):
+        return ""
+    if isinstance(valor, (date, datetime)):
+        return valor.isoformat()[:10]
+    texto = str(valor).strip()
+    if not texto or texto.lower() in {"nat", "nan", "none"}:
+        return ""
+    return texto[:10]
+
+
+def _formatar_data_br(valor) -> str:
+    """Converte datas ISO para o formato brasileiro da interface."""
+    data_iso = _normalizar_data_iso(valor)
+    if not data_iso:
+        return ""
+    try:
+        return datetime.strptime(data_iso, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        return data_iso
+
+
 def _formatar_data_curta(valor) -> str:
     """Converte datas e timestamps para exibiÃ§Ã£o curta na interface."""
-    if isinstance(valor, datetime):
-        return valor.strftime("%Y-%m-%d")
-    if valor in (None, ""):
-        return ""
-    return str(valor)[:10]
+    return _normalizar_data_iso(valor)
 
 
 # ---------------------------------------------------------------------------
@@ -2587,12 +2606,7 @@ def _tabela_caixas_fig(df_exibir: pd.DataFrame) -> "go.Figure":
     for col in colunas_dados:
         if col in df_exibir.columns:
             if col == "data":
-                vals = df_exibir[col].apply(
-                    lambda d: (
-                        __import__("datetime").datetime.strptime(str(d), "%Y-%m-%d").strftime("%d/%m/%Y")
-                        if len(str(d)) == 10 else str(d)
-                    )
-                ).tolist()
+                vals = df_exibir[col].apply(_formatar_data_br).tolist()
             else:
                 vals = df_exibir[col].tolist()
             valores.append(vals)
@@ -2673,12 +2687,19 @@ def _render_aba_caixas() -> None:
     st.markdown("---")
 
     # ---- BLOCO 2 — Filtros ----
-    datas_unicas = sorted(df["data"].dropna().unique().tolist(), reverse=True)
-    datas_fmt    = [
-        __import__("datetime").datetime.strptime(d, "%Y-%m-%d").strftime("%d/%m/%Y")
-        if len(str(d)) == 10 else str(d)
-        for d in datas_unicas
-    ]
+    datas_unicas = sorted(
+        {
+            data_iso
+            for valor in df["data"].dropna().tolist()
+            if (data_iso := _normalizar_data_iso(valor))
+        },
+        reverse=True,
+    )
+    mapa_datas = {
+        _formatar_data_br(data_iso): data_iso
+        for data_iso in datas_unicas
+    }
+    datas_fmt = list(mapa_datas.keys())
     lojas_unicas = (
         df[["n_loja", "loja"]].drop_duplicates()
         .sort_values("n_loja")
@@ -2693,8 +2714,10 @@ def _render_aba_caixas() -> None:
 
     df_filtrado = df.copy()
     if sel_data != "Todas as datas":
-        data_iso = __import__("datetime").datetime.strptime(sel_data, "%d/%m/%Y").strftime("%Y-%m-%d")
-        df_filtrado = df_filtrado[df_filtrado["data"].astype(str) == data_iso]
+        data_iso = mapa_datas.get(sel_data, "")
+        df_filtrado = df_filtrado[
+            df_filtrado["data"].apply(_normalizar_data_iso) == data_iso
+        ]
     if sel_loja != "Todas as lojas":
         n_sel = int(sel_loja.split(" — ")[0].replace("Loja ", ""))
         df_filtrado = df_filtrado[df_filtrado["n_loja"] == n_sel]
@@ -2713,10 +2736,7 @@ def _render_aba_caixas() -> None:
         linhas_html = ""
         for i, row in df_filtrado.iterrows():
             bg = t["tr_par"] if i % 2 == 0 else t["tr_impar"]
-            data_fmt = (
-                __import__("datetime").datetime.strptime(str(row["data"]), "%Y-%m-%d").strftime("%d/%m/%Y")
-                if len(str(row["data"])) == 10 else str(row["data"])
-            )
+            data_fmt = _formatar_data_br(row["data"])
             entregue_val = str(row.get("entregue", "")).lower()
             if entregue_val == "sim":
                 badge = f"<span style='background:{t['badge_sim_bg']};color:{t['badge_sim_fg']};border:1px solid {t['badge_sim_bd']};padding:2px 10px;border-radius:99px;font-size:0.78rem;font-weight:600'>sim</span>"
