@@ -1110,6 +1110,15 @@ def _cor_preco(preco, referencia) -> str:
     return ""
 
 
+def _formatar_data_curta(valor) -> str:
+    """Converte datas e timestamps para exibiÃ§Ã£o curta na interface."""
+    if isinstance(valor, datetime):
+        return valor.strftime("%Y-%m-%d")
+    if valor in (None, ""):
+        return ""
+    return str(valor)[:10]
+
+
 # ---------------------------------------------------------------------------
 # Sidebar
 # ---------------------------------------------------------------------------
@@ -1197,7 +1206,7 @@ def _render_sidebar() -> None:
                 if not _pendentes:
                     st.caption("Sem solicitações pendentes no momento.")
                 for _p in _pendentes:
-                    _data = _p.get("solicitado_em", "")[:10]
+                    _data = _formatar_data_curta(_p.get("solicitado_em"))
                     _func_p = _p.get("funcionalidade", "administracao geral")
                     st.markdown(
                         f"**{_p['nome']}** (`{_p['username']}`) — {_data} · "

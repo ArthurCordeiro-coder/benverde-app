@@ -25,6 +25,13 @@ def _hash_senha(salt: str, senha: str) -> str:
     return hashlib.sha256((salt + senha).encode()).hexdigest()
 
 
+def _serializar_timestamp(valor):
+    """Normaliza timestamps do banco para formato texto quando necessário."""
+    if isinstance(valor, datetime):
+        return valor.isoformat()
+    return valor
+
+
 # ---------------------------------------------------------------------------
 # Leitura / escrita pública
 # ---------------------------------------------------------------------------
@@ -93,7 +100,7 @@ def carregar_pending() -> list[dict]:
                         "nome": row[1],
                         "salt": row[2],
                         "senha_hash": row[3],
-                        "solicitado_em": row[4],
+                        "solicitado_em": _serializar_timestamp(row[4]),
                         "funcionalidade": row[5],
                     }
                     for row in cur.fetchall()
